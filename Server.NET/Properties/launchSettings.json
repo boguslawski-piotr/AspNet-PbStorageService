@@ -19,7 +19,7 @@
 		},
 		"Server.NET": {
 			"commandName": "Project",
-			"launchBrowser": true,
+			"launchBrowser": false,
 			"launchUrl": "api/values",
 			"workingDirectory": "$(ProjectDir)",
 			"environmentVariables": {
