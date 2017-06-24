@@ -8,7 +8,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
-namespace pbXStorage.Server.NET
+namespace pbXStorage.Server
 {
     public class Startup
     {
@@ -25,10 +25,15 @@ namespace pbXStorage.Server.NET
         public IConfigurationRoot Configuration { get; }
 
         // This method gets called by the runtime. Use this method to add services to the container.
-        public void ConfigureServices(IServiceCollection services)
+        public async void ConfigureServices(IServiceCollection services)
         {
             // Add framework services.
             services.AddMvc();
+
+			Manager manager = new Manager();
+			services.AddSingleton(typeof(Manager), manager);
+
+			await manager.LoadClientsAsync();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

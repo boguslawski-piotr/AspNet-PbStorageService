@@ -10,8 +10,8 @@
 	"profiles": {
 		"IIS Express": {
 			"commandName": "IISExpress",
-			"launchBrowser": true,
-			"launchUrl": "api/values",
+			"launchBrowser": false,
+			"launchUrl": "api/storage",
 			"workingDirectory": "$(ProjectDir)",
 			"environmentVariables": {
 				"ASPNETCORE_ENVIRONMENT": "Development"
@@ -20,7 +20,7 @@
 		"Server.NET": {
 			"commandName": "Project",
 			"launchBrowser": false,
-			"launchUrl": "api/values",
+			"launchUrl": "api/storage",
 			"workingDirectory": "$(ProjectDir)",
 			"environmentVariables": {
 				"ASPNETCORE_ENVIRONMENT": "Development"
