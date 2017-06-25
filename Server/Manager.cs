@@ -4,6 +4,9 @@ using System.Text;
 using System.Threading.Tasks;
 using pbXNet;
 using System.Linq;
+using System.Collections.Concurrent;
+using System.Runtime.CompilerServices;
+using System.Threading;
 
 namespace pbXStorage.App
 {
@@ -26,25 +29,54 @@ namespace pbXStorage.App
 
 namespace pbXStorage.Server
 {
+	public class Base
+	{
+		protected Manager Manager;
+
+		public Base(Manager manager)
+		{
+			Manager = manager;
+		}
+	}
+
 	public class Manager
 	{
-		const string _clientsFileName = ".clients";
+		Lazy<ISerializer> _serializer = new Lazy<ISerializer>(() => new NewtonsoftJsonSerializer(), true);
+		ISerializer Serializer => _serializer.Value;
 
-		IDictionary<string, Client> _clients = new Dictionary<string, Client>();
+		ConcurrentDictionary<string, Client> _clients = new ConcurrentDictionary<string, Client>();
 
-		IDictionary<string, App> _apps = new Dictionary<string, App>();
+		ConcurrentDictionary<string, App> _apps = new ConcurrentDictionary<string, App>();
 
-		IDictionary<string, Storage> _storages = new Dictionary<string, Storage>();
+		ConcurrentDictionary<string, Storage> _storages = new ConcurrentDictionary<string, Storage>();
+
+		public async Task InitializeAsync()
+		{
+			await LoadClientsAsync();
+		}
 
 		public async Task<string> NewClientAsync()
 		{
-			Client client = Client.New();
+			try
+			{
+				Client client = Client.New(this);
 
-			_clients[client.Id] = client;
+				_clients[client.Id] = client;
 
-			await SaveClientsAsync();
+				await SaveClientsAsync();
 
-			return client.GetIdAndPublicKey();
+				string rc = client.GetIdAndPublicKey();
+
+				Log.I(rc);
+
+				return rc;
+			}
+			catch (Exception ex)
+			{
+				Log.E(ex.Message, this);
+			}
+
+			return Error("Failed to create client.");
 		}
 
 		public async Task<string> RegisterAppAsync(string clientId, string appPublicKey)
@@ -55,7 +87,7 @@ namespace pbXStorage.Server
 				{
 					App app = _apps.Values.ToList().Find((_app) => (_app.PublicKey == appPublicKey && _app.Client == client));
 					if (app == null)
-						app = new App(client, appPublicKey);
+						app = new App(this, client, appPublicKey);
 
 					if (app != null)
 					{
@@ -68,10 +100,10 @@ namespace pbXStorage.Server
 					return Error(ex.Message);
 				}
 
-				return Error("Failed to register application");
+				return Error("Failed to register application.");
 			}
 
-			return Error($"Client {clientId} doesn't exist");
+			return Error($"Client '{clientId}' doesn't exist.");
 		}
 
 		public async Task<string> OpenStorageAsync(string appToken, string storageId)
@@ -82,7 +114,7 @@ namespace pbXStorage.Server
 				{
 					Storage storage = _storages.Values.ToList().Find((_storage) => _storage.App.Token == appToken);
 					if (storage == null)
-						storage = new Storage(app, storageId);
+						storage = new Storage(this, app, storageId);
 
 					if (storage != null)
 					{
@@ -95,129 +127,134 @@ namespace pbXStorage.Server
 					return Error(ex.Message);
 				}
 
-				return Error("Failed to create/open storage");
+				return Error("Failed to create/open storage.");
 			}
 
-			return Error($"Incorrect application token {appToken}");
+			return Error($"Incorrect application token '{appToken}'.");
 		}
 
-		public async Task<string> StoreAsync(string storageToken, string thingId, string data)
+		async Task<string> ExecuteInStorage(string storageToken, Func<Storage, Task<string>> action, [CallerMemberName]string callerName = null)
 		{
 			if (_storages.TryGetValue(storageToken, out Storage storage))
 			{
 				try
 				{
-					if (await storage.StoreAsync(thingId, data))
-						return OK();
+					Task<string> task = action(storage);
+					return await task;
 				}
 				catch (Exception ex)
 				{
-					return Error(ex.Message);
+					return Error(ex.Message, callerName);
 				}
-
-				return Error("Failed to store data");
 			}
 
-			return Error($"Incorrect storage token {storageToken}");
+			return Error($"Incorrect storage token '{storageToken}'.", callerName);
 		}
 
-		public async Task<string> GetACopyAsync(string storageToken, string thingId)
+		public async Task<string> StoreThingAsync(string storageToken, string thingId, string data)
 		{
-			if (_storages.TryGetValue(storageToken, out Storage storage))
+			return await ExecuteInStorage(storageToken, async (Storage storage) =>
 			{
-				try
-				{
-					return await storage.GetACopyAsync(thingId);
-				}
-				catch (Exception ex)
-				{
-					return Error(ex.Message);
-				}
-			}
-
-			return Error($"Incorrect storage token {storageToken}");
+				await storage.StoreAsync(thingId, data);
+				return OK();
+			});
 		}
 
+		public async Task<string> GetThingCopyAsync(string storageToken, string thingId)
+		{
+			return await ExecuteInStorage(storageToken, async (Storage storage) =>
+			{
+				return await storage.GetACopyAsync(thingId);
+			});
+		}
+
+		public async Task<string> DiscardThingAsync(string storageToken, string thingId)
+		{
+			return await ExecuteInStorage(storageToken, async (Storage storage) =>
+			{
+				await storage.DiscardAsync(thingId);
+				return OK();
+			});
+		}
 
 		//
 		// Tools
 		//
 
+		IDb _db;
+
+		public async Task<IDb> GetDbAsync()
+		{
+			if (_db == null)
+			{
+				_db = new DbOnFileSystem();
+				await _db.InitializeAsync();
+			}
+
+			return _db;
+		}
+
+		readonly SemaphoreSlim _clientsLock = new SemaphoreSlim(1);
+
 		public async Task LoadClientsAsync()
 		{
-			IFileSystem fs = await FileSystem.GetAsync();
-
-			if (await fs.FileExistsAsync(_clientsFileName))
+			await _clientsLock.WaitAsync();
+			try
 			{
-				string d = await fs.ReadTextAsync(_clientsFileName);
+				IDb db = await GetDbAsync();
 
-				// TODO: decrypt and deobfuscate data (d)
+				string d = await db.GetClientsAsync();
+				if (d != null)
+				{
+					// TODO: decrypt and deobfuscate data (d)
 
-				_clients = Serializer.Get().Deserialize<IDictionary<string, Client>>(d);
+					_clients = Serializer.Deserialize<ConcurrentDictionary<string, Client>>(d);
 
-				foreach (var client in _clients.Values)
-					client.InitializeAfterDeserialize();
+					foreach (var client in _clients.Values)
+						await client.InitializeAfterDeserializeAsync(this);
+				}
+			}
+			catch (Exception ex)
+			{
+				Log.E(ex.Message, this);
+			}
+			finally
+			{
+				_clientsLock.Release();
 			}
 		}
 
 		public async Task SaveClientsAsync()
 		{
-			IFileSystem fs = await FileSystem.GetAsync();
+			await _clientsLock.WaitAsync();
+			try
+			{
+				string d = Serializer.Serialize(_clients);
 
-			string d = Serializer.Get().Serialize(_clients);
+				// TODO: obfuscate and encrypt data (d)
 
-			// TODO: obfuscate and encrypt data (d)
-
-			await fs.WriteTextAsync(_clientsFileName, d);
+				IDb db = await GetDbAsync();
+				await db.StoreClientsAsync(d);
+			}
+			catch (Exception ex)
+			{
+				Log.E(ex.Message, this);
+			}
+			finally
+			{
+				_clientsLock.Release();
+			}
 		}
 
-		public static string OK()
+		string OK()
 		{
 			return "OK";
 		}
 
-		public static string Error(string message)
+		string Error(string message, [CallerMemberName]string callerName = null)
 		{
+			Log.E(message, this, callerName);
 			return $"ERROR,{message}";
-		}
-	}
-
-	public static class Serializer
-	{
-		static ISerializer _serializer;
-
-		public static ISerializer Get()
-		{
-			if (_serializer == null)
-				_serializer = new NewtonsoftJsonSerializer();
-			return _serializer;
-		}
-	}
-
-	public static class FileSystem
-	{
-		public static async Task<IFileSystem> GetAsync()
-		{
-			string homePath = Environment.GetEnvironmentVariable("HOME");
-			if (homePath == null)
-				homePath = Environment.GetEnvironmentVariable("HOMEPATH");
-
-			DeviceFileSystem fs = new DeviceFileSystem(DeviceFileSystemRoot.UserDefined, homePath);
-
-			await fs.CreateDirectoryAsync(".pbXStorage");
-
-			return fs;
-		}
-
-		public static async Task<IFileSystem> GetAsync(Storage storage)
-		{
-			IFileSystem fs = await GetAsync();
-
-			await fs.CreateDirectoryAsync(storage.App.Client.Id);
-
-			await fs.CreateDirectoryAsync(storage.Id);
-
-			return fs;
 		}
 	}
 }

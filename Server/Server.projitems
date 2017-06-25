@@ -11,6 +11,8 @@
   <ItemGroup>
     <Compile Include="$(MSBuildThisFileDirectory)App.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Client.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)DbOnFileSystem.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)IDb.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Manager.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Controllers\StorageController.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Program.cs" />

@@ -15,6 +15,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "pbXNet.NETStd", "..\pbX\pbX
 EndProject
 Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Server", "Server\Server.shproj", "{91467C6A-AEAD-44CB-A6DD-76843369C45B}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Test.NETStd", "Test.NETStd\Test.NETStd.csproj", "{FB1EC68D-2E61-4E27-97AE-C5CDC8AD2F23}"
+EndProject
 Global
 	GlobalSection(SharedMSBuildProjectFiles) = preSolution
 		..\pbX\pbXNet\pbXNet.Shared.projitems*{0f24cc4f-7a9b-4835-8f00-4dc291773539}*SharedItemsImports = 13
@@ -42,6 +44,10 @@ Global
 		{9EE7F4CE-535E-4A31-BD49-ED95448764CA}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9EE7F4CE-535E-4A31-BD49-ED95448764CA}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9EE7F4CE-535E-4A31-BD49-ED95448764CA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FB1EC68D-2E61-4E27-97AE-C5CDC8AD2F23}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FB1EC68D-2E61-4E27-97AE-C5CDC8AD2F23}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FB1EC68D-2E61-4E27-97AE-C5CDC8AD2F23}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FB1EC68D-2E61-4E27-97AE-C5CDC8AD2F23}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

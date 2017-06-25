@@ -4,7 +4,7 @@ using pbXNet;
 
 namespace pbXStorage.Server
 {
-	public class App
+	public class App : Base
 	{
 		public Client Client { get; }
 
@@ -18,24 +18,36 @@ namespace pbXStorage.Server
 		// Decrypted app public key used to encrypt data which will be send to app from server.
 		IByteBuffer _publicKey;
 
-		public App(Client client, string publicKey)
+		public App(Manager manager, Client client, string publicKey)
+			: base(manager)
 		{
 			Client = client ?? throw new ArgumentNullException(nameof(client));
 			PublicKey = publicKey ?? throw new ArgumentNullException(nameof(publicKey));
 
 			Token = Tools.CreateGuid();
 
-			// TODO: try to decrypt publicKey with clientPrivateKey, throw exception if error
+			publicKey = Client.Decrypt(PublicKey);
+			// TODO: try to decrypt publicKey with Client.PrivateKey, throw exception if error
 			_publicKey = null;
 		}
 
 		public string GetToken()
 		{
 			string token = Token;
-			//string signature = Client.Sign(token);
-			string signature = "signature";
+			string signature = Client.Sign(token);
 
-			return $"{signature},{token}";
+			string data = $"{signature},{token}";
+			return Obfuscator.Obfuscate(data);
+		}
+
+		public string Encrypt(string data)
+		{
+			return data;
+		}
+
+		public bool Verify(string data, string signature)
+		{
+			return true;
 		}
 	}
 }

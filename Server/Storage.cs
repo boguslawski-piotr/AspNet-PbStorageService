@@ -1,20 +1,22 @@
 ﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 using pbXNet;
 
 namespace pbXStorage.Server
 {
-	public class Storage
+	public class Storage : Base
 	{
 		public App App { get; }
 
 		public string Id { get; }
+
 		public string Token { get; }
 
-		string PublicKey;
-		string PrivateKey;
+		IAsymmetricCryptographerKeyPair _keys;
 
-		public Storage(App app, string id)
+		public Storage(Manager manager, App app, string id)
+			: base(manager)
 		{
 			App = app ?? throw new ArgumentNullException(nameof(app));
 			Id = id ?? throw new ArgumentNullException(nameof(id));
@@ -22,47 +24,73 @@ namespace pbXStorage.Server
 			Token = Tools.CreateGuid();
 
 			// TODO: create key pair
+			
 		}
 
 		public string GetTokenAndPublicKey()
 		{
+			// create string version of _keys.pbl
+			string PublicKey = "storage public key";
+
 			string tokenAndPublicKey = $"{Token},{PublicKey}";
 
-			//tokenAndPublicKey = App.Encrypt(tokenAndPublicKey);
-			//string signature = App.Client.Sign(tokenAndPublicKey);
-			string signature = "signature";
+			tokenAndPublicKey = App.Encrypt(tokenAndPublicKey);
+			string signature = App.Client.Sign(tokenAndPublicKey);
 
-			return $"{signature},{tokenAndPublicKey}";
+			string data = $"{signature},{tokenAndPublicKey}";
+			return Obfuscator.Obfuscate(data);
 		}
 
-		public async Task<bool> StoreAsync(string thingId, string data)
+		public string Sign(string data)
 		{
-			// split data into signature and data
+			return "signature";
+		}
 
-			// verify signature with App.PublicKey
+		public string Decrypt(string data)
+		{
+			return data;
+		}
 
-			// decrypt data with PrivateKey
+		public async Task StoreAsync(string thingId, string data)
+		{
+			data = Obfuscator.DeObfuscate(data);
 
-			// store data to fs
+			string[] signatureAndData = data.Split(new char[] { ',' }, 2);
+			string signature = signatureAndData[0];
+			data = signatureAndData[1];
 
-			IFileSystem fs = await FileSystem.GetAsync(this);
+			if (!App.Verify(data, signature))
+				throw new Exception("Incorrect data.");
 
-			await fs.WriteTextAsync(thingId, data);
+			data = Decrypt(data);
 
-			return true;
+			string[] dataAndModifiedOn = data.Split(',');
+			data = dataAndModifiedOn[0];
+
+			// TODO: handle modifiedOn
+
+			IDb db = await Manager.GetDbAsync();
+			await db.StoreThingAsync(this, thingId, data);
 		}
 
 		public async Task<string> GetACopyAsync(string thingId)
 		{
-			// get data from fs
+			IDb db = await Manager.GetDbAsync();
 
-			IFileSystem fs = await FileSystem.GetAsync(this);
+			string data = await db.GetThingCopyAsync(this, thingId);
 
-			// encrypt with App.PublicKey
+			data = App.Encrypt(data);
+			string signature = Sign(data);
 
-			// sign with privateKey
-
-			return "signature,data";
+			data = $"{signature},{data}";
+			return Obfuscator.Obfuscate(data);
 		}
+
+		public async Task DiscardAsync(string thingId)
+		{
+			IDb db = await Manager.GetDbAsync();
+			await db.DiscardThingAsync(this, thingId);
+		}
+
 	}
 }

@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
+using pbXNet;
 
 // register (special util, web page, etc.) -> clientId, clientPublicKey
 // app has:
@@ -18,7 +20,7 @@ using Microsoft.AspNetCore.Mvc;
 //   appPrivateKey
 //   appPublicKey
 
-// hello (post clientId) <- (appPublicKey) encrypted with clientPublicKey -> (appToken) signed with clientPrivateKey
+// registerapp (post clientId) <- (appPublicKey) encrypted with clientPublicKey -> (appToken) signed with clientPrivateKey
 // app has:
 //   appToken
 // server has
@@ -40,22 +42,15 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace pbXStorage.Server.Controllers
 {
-    [Route("api/[controller]")]
+	[Route("api/[controller]")]
     public class StorageController : Controller
     {
 		Manager _manager;
 
-		public StorageController(Manager manager)
+		public StorageController(Manager manager, ILogger<StorageController> logger)
 		{
 			_manager = manager;
 		}
-
-		// GET api/storage
-		[HttpGet]
-        public string Get()
-        {
-			return "pbXStorage"; // TODO: jakas strona powitalna, z dokumentacja, itp.
-        }
 
 #if DEBUG
 		// GET api/storage/newclient
@@ -84,22 +79,21 @@ namespace pbXStorage.Server.Controllers
 		[HttpPut("store/{storageToken},{thingId}")]
 		public async Task<string> Store(string storageToken, string thingId, [FromBody]string data)
 		{
-			return await _manager.StoreAsync(storageToken, thingId, data);
+			return await _manager.StoreThingAsync(storageToken, thingId, data);
 		}
 
 		// GET api/storage/getacopy
 		[HttpGet("getacopy/{storageToken},{thingId}")]
 		public async Task<string> GetACopy(string storageToken, string thingId)
 		{
-			return await _manager.GetACopyAsync(storageToken, thingId);
+			return await _manager.GetThingCopyAsync(storageToken, thingId);
 		}
 
-
-		// DELETE api/storage/5
-		[HttpDelete("{id}")]
-        public string Delete(int id, [FromBody]string value)
+		// DELETE api/storage/discard
+		[HttpDelete("discard/{storageToken},{thingId}")]
+        public async Task<string> Discard(string storageToken, string thingId)
         {
-			return $"from delete: {id}, {value}";
+			return await _manager.DiscardThingAsync(storageToken, thingId);
 		}
 	}
 }

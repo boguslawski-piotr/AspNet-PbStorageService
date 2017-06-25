@@ -6,7 +6,8 @@ using pbXNet;
 
 namespace pbXStorage.Server
 {
-	public class Client
+	[System.Serializable]
+	public class Client : Base
 	{
 		/// <summary>
 		/// Client identifier.
@@ -24,32 +25,51 @@ namespace pbXStorage.Server
 		public string PrivateKey { get; set; }
 
 		// Real key pair used to encrypt/decrypt/sign/verify data.
-		IByteBuffer _publicKey;
-		IByteBuffer _privateKey;
+		IAsymmetricCryptographerKeyPair _keys;
 
-		public static Client New()
+		public Client()
+			: base(null)
+		{ }
+
+		public Client(Manager manager)
+			: base(manager)
+		{ }
+
+		public static Client New(Manager manager)
 		{
-			Client client = new Client
+			Client client = new Client(manager)
 			{
 				Id = Tools.CreateGuid(),
 
 				// TODO: create clientKeyPair
 
-				PublicKey = "public key",
-				PrivateKey = "private key",
+				PublicKey = "client public key",
+				PrivateKey = "client private key",
 			};
 
 			return client;
 		}
 
-		public void InitializeAfterDeserialize()
+		public async Task InitializeAfterDeserializeAsync(Manager manager)
 		{
+			Manager = manager;
 			// TODO: deobfuscate/decrypt PublicKey/PrivateKey
 		}
 
 		public string GetIdAndPublicKey()
 		{
-			return $"{Id},{PublicKey}";
+			string data = $"{Id},{PublicKey}";
+			return Obfuscator.Obfuscate(data);
+		}
+
+		public string Sign(string data)
+		{
+			return "signature";
+		}
+
+		public string Decrypt(string data)
+		{
+			return data;
 		}
 	}
 }
