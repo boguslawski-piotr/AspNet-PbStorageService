@@ -50,9 +50,9 @@ namespace pbXStorage.Server
 
 		public IDb Db { get; set; }
 
-		public Func<string, string> Encrypter;
+		public Func<string, string> Encrypt;
 
-		public Func<string, string> Decrypter;
+		public Func<string, string> Decrypt;
 
 		ConcurrentDictionary<string, Client> _clients = new ConcurrentDictionary<string, Client>();
 
@@ -238,8 +238,8 @@ namespace pbXStorage.Server
 				string d = await Db.GetClientsAsync();
 				if (d != null)
 				{
-					if(Decrypter != null)
-						d = Decrypter(d);
+					if(Decrypt != null)
+						d = Decrypt(d);
 
 					d = Obfuscator.DeObfuscate(d);
 
@@ -271,8 +271,8 @@ namespace pbXStorage.Server
 
 				d = Obfuscator.Obfuscate(d);
 
-				if(Encrypter != null)
-					d = Encrypter(d);
+				if(Encrypt != null)
+					d = Encrypt(d);
 
 				await Db.StoreClientsAsync(d).ConfigureAwait(false);
 			}

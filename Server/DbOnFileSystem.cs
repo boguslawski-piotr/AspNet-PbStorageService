@@ -114,7 +114,7 @@ namespace pbXStorage.Server
 		{
 			await ExecuteInLock(storage, thingId, async (IFileSystem fs) =>
 			{
-				data = Manager != null && Manager.Encrypter != null ? Manager.Encrypter(data) : data;
+				data = Manager != null && Manager.Encrypt != null ? Manager.Encrypt(data) : data;
 				await fs.WriteTextAsync(thingId, data).ConfigureAwait(false);
 				return null;
 			})
@@ -163,7 +163,7 @@ namespace pbXStorage.Server
 					throw new Exception($"'{storage.Id}/{thingId}' was not found.");
 
 				string data = await fs.ReadTextAsync(thingId).ConfigureAwait(false);
-				data = Manager != null && Manager.Decrypter != null ? Manager.Decrypter(data) : data;
+				data = Manager != null && Manager.Decrypt != null ? Manager.Decrypt(data) : data;
 
 				return data;
 			})

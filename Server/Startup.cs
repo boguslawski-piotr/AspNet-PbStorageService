@@ -91,8 +91,8 @@ namespace pbXStorage.Server
 			Manager manager = app.ApplicationServices.GetService<Manager>();
 
 			manager.Serializer = new NewtonsoftJsonSerializer();
-			manager.Decrypter = protector.Unprotect;
-			manager.Encrypter = protector.Protect;
+			manager.Decrypt = protector.Unprotect;
+			manager.Encrypt = protector.Protect;
 
 			await manager.UseDbAsync<DbOnFileSystem>();
 
