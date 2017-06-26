@@ -1,8 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -11,11 +9,11 @@ using pbXNet;
 
 namespace pbXStorage.Server
 {
-	public class pbXNetILogger2MicrosoftExtensionsLoggingILogger : pbXNet.ILogger
+	public class PbXNetILogger2MicrosoftExtensionsLoggingILogger : pbXNet.ILogger
 	{
 		Microsoft.Extensions.Logging.ILogger _logger;
 
-		public pbXNetILogger2MicrosoftExtensionsLoggingILogger(Microsoft.Extensions.Logging.ILogger logger)
+		public PbXNetILogger2MicrosoftExtensionsLoggingILogger(Microsoft.Extensions.Logging.ILogger logger)
 		{
 			_logger = logger;
 		}
@@ -42,48 +40,63 @@ namespace pbXStorage.Server
 	}
 
 	public class Startup
-    {
+	{
 		public IConfigurationRoot Configuration { get; }
 
 		public Startup(IHostingEnvironment env)
-        {
-            var builder = new ConfigurationBuilder()
-                .SetBasePath(env.ContentRootPath)
-                .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
-                .AddJsonFile($"appsettings.{env.EnvironmentName}.json", optional: true)
-                .AddEnvironmentVariables();
-            Configuration = builder.Build();
-        }
+		{
+			var builder = new ConfigurationBuilder()
+				.SetBasePath(env.ContentRootPath)
+				.AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+				.AddJsonFile($"appsettings.{env.EnvironmentName}.json", optional: true)
+				.AddEnvironmentVariables();
 
-        // This method gets called by the runtime. Use this method to add services to the container.
-        public async void ConfigureServices(IServiceCollection services)
-        {
-            // Add framework services.
-            services.AddMvc();
+			Configuration = builder.Build();
+		}
+
+		// This method gets called by the runtime. Use this method to add services to the container.
+		public void ConfigureServices(IServiceCollection services)
+		{
+			// Add framework services.
+			services.AddMvc();
+
+			//DataProtectionOptions a = new DataProtectionOptions();
+			services.AddDataProtection();
 
 			// Add pbXStorage manager.
-			Manager manager = new Manager();
-			services.AddSingleton<Manager>(manager);
+			services.AddSingleton(new Manager());
+		}
 
-			// Configure/initialize pbXStorage manager.
-			await manager.InitializeAsync();
-        }
-
-        // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IHostingEnvironment env, ILoggerFactory loggerFactory)
-        {
+		// This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
+		public async void Configure(IApplicationBuilder app, IHostingEnvironment env, ILoggerFactory loggerFactory)
+		{
 			// Create ASP.NET standard loggers.
+
 			loggerFactory.AddConsole(Configuration.GetSection("Logging"));
-            loggerFactory.AddDebug();
+			loggerFactory.AddDebug();
 
 			// Create bridge from pbXNet logging system to ASP.NET logging system.
+
 			Microsoft.Extensions.Logging.ILogger logger = loggerFactory.CreateLogger("pbXStorage.Server");
-			Log.AddLogger(new pbXNetILogger2MicrosoftExtensionsLoggingILogger(logger));
+			Log.AddLogger(new PbXNetILogger2MicrosoftExtensionsLoggingILogger(logger));
 
 			// Use MVC framework.
+
 			app.UseMvc();
 
-			//app.UseWelcomePage(); // TODO: zrobic swoja...
-        }
-    }
+			// Configure/initialize pbXStorage.
+
+			IDataProtector protector = app.ApplicationServices.GetDataProtector(new string[] { "pbXStorage", "Server", "v1" });
+
+			Manager manager = app.ApplicationServices.GetService<Manager>();
+
+			manager.Serializer = new NewtonsoftJsonSerializer();
+			manager.Decrypter = protector.Unprotect;
+			manager.Encrypter = protector.Protect;
+
+			await manager.UseDbAsync<DbOnFileSystem>();
+
+			await manager.InitializeAsync();
+		}
+	}
 }

@@ -1,11 +1,13 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using pbXNet;
 
 namespace pbXStorage.Server
 {
-	public class Storage : Base
+	public class Storage : ManagedObject
 	{
 		public App App { get; }
 
@@ -21,40 +23,36 @@ namespace pbXStorage.Server
 			App = app ?? throw new ArgumentNullException(nameof(app));
 			Id = id ?? throw new ArgumentNullException(nameof(id));
 
-			Token = Tools.CreateGuid();
+			Token = Tools.CreateGuidEx();
 
-			// TODO: create key pair
-			
+			RsaCryptographer cryptographer = new RsaCryptographer();
+			_keys = cryptographer.GenerateKeyPair();
 		}
 
-		public string GetTokenAndPublicKey()
+		public string TokenAndPublicKey
 		{
-			// create string version of _keys.pbl
-			string PublicKey = "storage public key";
+			get {
+				string tokenAndPublicKey = $"{Token},{_keys.Public}";
 
-			string tokenAndPublicKey = $"{Token},{PublicKey}";
+				tokenAndPublicKey = App.Encrypt(tokenAndPublicKey);
+				string signature = App.Client.Sign(tokenAndPublicKey);
 
-			tokenAndPublicKey = App.Encrypt(tokenAndPublicKey);
-			string signature = App.Client.Sign(tokenAndPublicKey);
-
-			string data = $"{signature},{tokenAndPublicKey}";
-			return Obfuscator.Obfuscate(data);
+				return $"{signature},{tokenAndPublicKey}";
+			}
 		}
 
 		public string Sign(string data)
 		{
-			return "signature";
+			return RsaCryptographerHelper.Sign(data, _keys);
 		}
 
 		public string Decrypt(string data)
 		{
-			return data;
+			return RsaCryptographerHelper.Decrypt(data, _keys);
 		}
 
 		public async Task StoreAsync(string thingId, string data)
 		{
-			data = Obfuscator.DeObfuscate(data);
-
 			string[] signatureAndData = data.Split(new char[] { ',' }, 2);
 			string signature = signatureAndData[0];
 			data = signatureAndData[1];
@@ -64,33 +62,71 @@ namespace pbXStorage.Server
 
 			data = Decrypt(data);
 
-			string[] dataAndModifiedOn = data.Split(',');
-			data = dataAndModifiedOn[0];
+			string[] modifiedOnAndData = data.Split(new char[] { ',' }, 2);
+			DateTime modifiedOn = DateTime.FromBinary(long.Parse(modifiedOnAndData[0]));
+			data = modifiedOnAndData[1];
 
-			// TODO: handle modifiedOn
+			await Manager.Db.StoreThingAsync(this, thingId, data).ConfigureAwait(false);
+			await Manager.Db.SetThingModifiedOnAsync(this, thingId, modifiedOn.ToUniversalTime()).ConfigureAwait(false);
+		}
 
-			IDb db = await Manager.GetDbAsync();
-			await db.StoreThingAsync(this, thingId, data);
+		public async Task<string> ExistsAsync(string thingId)
+		{
+			bool exists = await Manager.Db.ThingExistsAsync(this, thingId).ConfigureAwait(false);
+			return exists ? "YES" : "NO";
+		}
+
+		public async Task<string> GetModifiedOnAsync(string thingId)
+		{
+			DateTime modifiedOn = await Manager.Db.GetThingModifiedOnAsync(this, thingId).ConfigureAwait(false);
+			return modifiedOn.ToUniversalTime().ToBinary().ToString();
 		}
 
 		public async Task<string> GetACopyAsync(string thingId)
 		{
-			IDb db = await Manager.GetDbAsync();
+			string data = await Manager.Db.GetThingCopyAsync(this, thingId).ConfigureAwait(false);
+			DateTime modifiedOn = await Manager.Db.GetThingModifiedOnAsync(this, thingId).ConfigureAwait(false);
 
-			string data = await db.GetThingCopyAsync(this, thingId);
+			data = $"{modifiedOn.ToUniversalTime().ToBinary().ToString()},{data}";
 
 			data = App.Encrypt(data);
 			string signature = Sign(data);
 
-			data = $"{signature},{data}";
-			return Obfuscator.Obfuscate(data);
+			return $"{signature},{data}";
 		}
 
 		public async Task DiscardAsync(string thingId)
 		{
-			IDb db = await Manager.GetDbAsync();
-			await db.DiscardThingAsync(this, thingId);
+			await Manager.Db.DiscardThingAsync(this, thingId).ConfigureAwait(false);
 		}
 
+		public async Task<string> FindIdsAsync(string pattern)
+		{
+			if (string.IsNullOrWhiteSpace(pattern))
+				pattern = "";
+
+			IEnumerable<string> ids = await Manager.Db.FindThingIdsAsync(this, pattern).ConfigureAwait(false);
+
+			StringBuilder sids = null;
+			foreach (var id in ids)
+			{
+				if (sids == null)
+					sids = new StringBuilder();
+				else
+					sids.Append('|');
+				sids.Append(id);
+			}
+
+			string data = sids?.ToString();
+			if (data != null)
+			{
+				data = App.Encrypt(data);
+				string signature = Sign(data);
+
+				return $"{signature},{data}";
+			}
+
+			return null;
+		}
 	}
 }

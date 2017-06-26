@@ -6,15 +6,17 @@
     <SharedGUID>91467c6a-aead-44cb-a6dd-76843369c45b</SharedGUID>
   </PropertyGroup>
   <PropertyGroup Label="Configuration">
-    <Import_RootNamespace>Server</Import_RootNamespace>
+    <Import_RootNamespace>pbXStorage.Server</Import_RootNamespace>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="$(MSBuildThisFileDirectory)App.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Client.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)DbOnFileSystem.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)IDb.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ManagedObject.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Manager.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Controllers\StorageController.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ManagerExtensions.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Program.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Startup.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Storage.cs" />

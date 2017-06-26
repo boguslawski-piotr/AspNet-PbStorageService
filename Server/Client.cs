@@ -7,7 +7,7 @@ using pbXNet;
 namespace pbXStorage.Server
 {
 	[System.Serializable]
-	public class Client : Base
+	public class Client : ManagedObject
 	{
 		/// <summary>
 		/// Client identifier.
@@ -37,39 +37,49 @@ namespace pbXStorage.Server
 
 		public static Client New(Manager manager)
 		{
-			Client client = new Client(manager)
-			{
-				Id = Tools.CreateGuid(),
+			if(manager == null)
+				throw new ArgumentNullException(nameof(manager));
 
-				// TODO: create clientKeyPair
+			Client client = new Client(manager);
 
-				PublicKey = "client public key",
-				PrivateKey = "client private key",
-			};
+			client.Id = Tools.CreateGuidEx();
+
+			RsaCryptographer cryptographer = new RsaCryptographer();
+			client._keys = cryptographer.GenerateKeyPair();
+
+			client.PublicKey = client._keys.Public;
+			client.PrivateKey = client._keys.Private;
+			
+			// TODO: encrypt & obfuscate client.PrivateKey
 
 			return client;
 		}
 
-		public async Task InitializeAfterDeserializeAsync(Manager manager)
+		public Task InitializeAfterDeserializeAsync(Manager manager)
 		{
-			Manager = manager;
-			// TODO: deobfuscate/decrypt PublicKey/PrivateKey
+			Manager = manager ?? throw new ArgumentNullException(nameof(manager));
+
+			// TODO: deobfuscate & decrypt PrivateKey - only for use in RsaKeyPair
+			string privateKey = PrivateKey;
+
+			_keys = new RsaKeyPair(privateKey, PublicKey);
+
+			return Task.FromResult(true);
 		}
 
 		public string GetIdAndPublicKey()
 		{
-			string data = $"{Id},{PublicKey}";
-			return Obfuscator.Obfuscate(data);
+			return $"{Id},{PublicKey}";
 		}
 
 		public string Sign(string data)
 		{
-			return "signature";
+			return RsaCryptographerHelper.Sign(data, _keys);
 		}
 
 		public string Decrypt(string data)
 		{
-			return data;
+			return RsaCryptographerHelper.Decrypt(data, _keys);
 		}
 	}
 }

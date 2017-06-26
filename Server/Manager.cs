@@ -8,41 +8,51 @@ using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
 using System.Threading;
 
-namespace pbXStorage.App
-{
-	public class App
-	{
-		// generated in App
-		public string appPublicKey;
-		public string appPrivateKey;
+// register (special util, web page, etc.) -> clientId, clientPublicKey
+// app has:
+//   clientId
+//   clientPublicKey
+// server has:
+//   clientId
+//   clientPublicKey
+//   clientPrivateKey
 
-		// from pbXStorage tool/website
-		public string clientId;
-		public string clientPublicKey;
+// app run
+// generate:
+//   appPrivateKey
+//   appPublicKey
 
-		// from communication
-		public string appToken;
-		public string storageToken;
-		public string storagePublicKey;
-	}
-}
+// registerapp (post clientId) <- (appPublicKey) encrypted with clientPublicKey -> (appToken)
+// app has:
+//   appToken
+// server has
+//   appPublicKey
+
+// open (get appToken, storageId) <- nothing -> (storageToken, storagePublicKey) encrypted with appPublicKey, and signed with clientPrivateKey
+// app has:
+//   storageToken
+//   storagePublicKey
+// server has
+//   storageToken
+//   storagePrivateKey
+
+// store (put storageToken, thingId) <- (data) encrypted with storagePublicKey, and signed with appPrivateKey -> OK or error
+
+// getACopy (get storageToken, thingId) <- nothing -> (modifiedOn,data) encrypted with appPublicKey, and signed with storagePrivateKey
+
+// findIds (get storageToken, pattern) <- nothing -> (ids list separated with |) encrypted with appPublicKey, and signed with storagePrivateKey
 
 namespace pbXStorage.Server
 {
-	public class Base
-	{
-		protected Manager Manager;
-
-		public Base(Manager manager)
-		{
-			Manager = manager;
-		}
-	}
-
 	public class Manager
 	{
-		Lazy<ISerializer> _serializer = new Lazy<ISerializer>(() => new NewtonsoftJsonSerializer(), true);
-		ISerializer Serializer => _serializer.Value;
+		public ISerializer Serializer { get; set; }
+
+		public IDb Db { get; set; }
+
+		public Func<string, string> Encrypter;
+
+		public Func<string, string> Decrypter;
 
 		ConcurrentDictionary<string, Client> _clients = new ConcurrentDictionary<string, Client>();
 
@@ -52,6 +62,13 @@ namespace pbXStorage.Server
 
 		public async Task InitializeAsync()
 		{
+			if (Serializer == null || Db == null)
+			{
+				string msg = $"{nameof(Serializer)} and {nameof(Db)} must be valid objects.";
+				Log.E(msg, this);
+				throw new ArgumentException(msg);
+			}
+
 			await LoadClientsAsync();
 		}
 
@@ -63,13 +80,13 @@ namespace pbXStorage.Server
 
 				_clients[client.Id] = client;
 
-				await SaveClientsAsync();
+				await SaveClientsAsync().ConfigureAwait(false);
 
 				string rc = client.GetIdAndPublicKey();
 
-				Log.I(rc);
+				//Log.I(rc);
 
-				return rc;
+				return OK(rc);
 			}
 			catch (Exception ex)
 			{
@@ -85,15 +102,17 @@ namespace pbXStorage.Server
 			{
 				try
 				{
+					appPublicKey = Obfuscator.DeObfuscate(appPublicKey);
+
 					App app = _apps.Values.ToList().Find((_app) => (_app.PublicKey == appPublicKey && _app.Client == client));
 					if (app == null)
+					{
 						app = new App(this, client, appPublicKey);
+						_apps[app.Token] = app;
+					}
 
 					if (app != null)
-					{
-						_apps[app.Token] = app;
-						return app.GetToken();
-					}
+						return OK(app.Token);
 				}
 				catch (Exception ex)
 				{
@@ -112,15 +131,15 @@ namespace pbXStorage.Server
 			{
 				try
 				{
-					Storage storage = _storages.Values.ToList().Find((_storage) => _storage.App.Token == appToken);
+					Storage storage = _storages.Values.ToList().Find((_storage) => (_storage.App.Token == appToken && _storage.Id == storageId));
 					if (storage == null)
+					{
 						storage = new Storage(this, app, storageId);
+						_storages[storage.Token] = storage;
+					}
 
 					if (storage != null)
-					{
-						_storages[storage.Token] = storage;
-						return storage.GetTokenAndPublicKey();
-					}
+						return OK(storage.TokenAndPublicKey);
 				}
 				catch (Exception ex)
 				{
@@ -133,6 +152,8 @@ namespace pbXStorage.Server
 			return Error($"Incorrect application token '{appToken}'.");
 		}
 
+		#region Things
+
 		async Task<string> ExecuteInStorage(string storageToken, Func<Storage, Task<string>> action, [CallerMemberName]string callerName = null)
 		{
 			if (_storages.TryGetValue(storageToken, out Storage storage))
@@ -140,7 +161,7 @@ namespace pbXStorage.Server
 				try
 				{
 					Task<string> task = action(storage);
-					return await task;
+					return await task.ConfigureAwait(false);
 				}
 				catch (Exception ex)
 				{
@@ -155,68 +176,85 @@ namespace pbXStorage.Server
 		{
 			return await ExecuteInStorage(storageToken, async (Storage storage) =>
 			{
-				await storage.StoreAsync(thingId, data);
+				data = Obfuscator.DeObfuscate(data);
+
+				await storage.StoreAsync(thingId, data).ConfigureAwait(false);
 				return OK();
-			});
+			}).ConfigureAwait(false);
+		}
+
+		public async Task<string> ThingExistsAsync(string storageToken, string thingId)
+		{
+			return await ExecuteInStorage(storageToken, async (Storage storage) =>
+			{
+				return OK(await storage.ExistsAsync(thingId).ConfigureAwait(false));
+			}).ConfigureAwait(false);
+		}
+
+		public async Task<string> GetThingModifiedOnAsync(string storageToken, string thingId)
+		{
+			return await ExecuteInStorage(storageToken, async (Storage storage) =>
+			{
+				return OK(await storage.GetModifiedOnAsync(thingId).ConfigureAwait(false));
+			}).ConfigureAwait(false);
 		}
 
 		public async Task<string> GetThingCopyAsync(string storageToken, string thingId)
 		{
 			return await ExecuteInStorage(storageToken, async (Storage storage) =>
 			{
-				return await storage.GetACopyAsync(thingId);
-			});
+				return OK(await storage.GetACopyAsync(thingId).ConfigureAwait(false));
+			}).ConfigureAwait(false);
 		}
 
 		public async Task<string> DiscardThingAsync(string storageToken, string thingId)
 		{
 			return await ExecuteInStorage(storageToken, async (Storage storage) =>
 			{
-				await storage.DiscardAsync(thingId);
+				await storage.DiscardAsync(thingId).ConfigureAwait(false);
 				return OK();
-			});
+			}).ConfigureAwait(false);
 		}
 
-		//
-		// Tools
-		//
-
-		IDb _db;
-
-		public async Task<IDb> GetDbAsync()
+		public async Task<string> FindThingIdsAsync(string storageToken, string pattern)
 		{
-			if (_db == null)
+			return await ExecuteInStorage(storageToken, async (Storage storage) =>
 			{
-				_db = new DbOnFileSystem();
-				await _db.InitializeAsync();
-			}
-
-			return _db;
+				return OK(await storage.FindIdsAsync(pattern).ConfigureAwait(false));
+			}).ConfigureAwait(false);
 		}
+
+		#endregion
+
+		#region Tools
 
 		readonly SemaphoreSlim _clientsLock = new SemaphoreSlim(1);
 
 		public async Task LoadClientsAsync()
 		{
-			await _clientsLock.WaitAsync();
+			await _clientsLock.WaitAsync().ConfigureAwait(false);
 			try
 			{
-				IDb db = await GetDbAsync();
-
-				string d = await db.GetClientsAsync();
+				string d = await Db.GetClientsAsync();
 				if (d != null)
 				{
-					// TODO: decrypt and deobfuscate data (d)
+					if(Decrypter != null)
+						d = Decrypter(d);
+
+					d = Obfuscator.DeObfuscate(d);
 
 					_clients = Serializer.Deserialize<ConcurrentDictionary<string, Client>>(d);
 
 					foreach (var client in _clients.Values)
-						await client.InitializeAfterDeserializeAsync(this);
+						await client.InitializeAfterDeserializeAsync(this).ConfigureAwait(false);
+
+					Log.I($"{_clients.Values.Count} client(s) definition loaded.");
 				}
 			}
 			catch (Exception ex)
 			{
 				Log.E(ex.Message, this);
+				throw ex;
 			}
 			finally
 			{
@@ -226,15 +264,17 @@ namespace pbXStorage.Server
 
 		public async Task SaveClientsAsync()
 		{
-			await _clientsLock.WaitAsync();
+			await _clientsLock.WaitAsync().ConfigureAwait(false);
 			try
 			{
 				string d = Serializer.Serialize(_clients);
 
-				// TODO: obfuscate and encrypt data (d)
+				d = Obfuscator.Obfuscate(d);
 
-				IDb db = await GetDbAsync();
-				await db.StoreClientsAsync(d);
+				if(Encrypter != null)
+					d = Encrypter(d);
+
+				await Db.StoreClientsAsync(d).ConfigureAwait(false);
 			}
 			catch (Exception ex)
 			{
@@ -246,15 +286,18 @@ namespace pbXStorage.Server
 			}
 		}
 
-		string OK()
+		string OK(string data = null)
 		{
-			return "OK";
+			data = "OK" + (data != null ? $",{data}" : "");
+			return Obfuscator.Obfuscate(data);
 		}
 
 		string Error(string message, [CallerMemberName]string callerName = null)
 		{
 			Log.E(message, this, callerName);
-			return $"ERROR,{message}";
+			return Obfuscator.Obfuscate($"ERROR,{message}");
 		}
+
+		#endregion
 	}
 }

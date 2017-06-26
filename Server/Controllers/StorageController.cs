@@ -1,44 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using pbXNet;
-
-// register (special util, web page, etc.) -> clientId, clientPublicKey
-// app has:
-//   clientId
-//   clientPublicKey
-// server has:
-//   clientId
-//   clientPublicKey
-//   clientPrivateKey
-
-// app run
-// generate:
-//   appPrivateKey
-//   appPublicKey
-
-// registerapp (post clientId) <- (appPublicKey) encrypted with clientPublicKey -> (appToken) signed with clientPrivateKey
-// app has:
-//   appToken
-// server has
-//   appPublicKey
-
-// open (get appToken, storageId) <- nothing -> (storageToken, storagePublicKey) encrypted with appPublicKey, and signed with clientPrivateKey
-// app has:
-//   storageToken
-//   storagePublicKey
-// server has
-//   storageToken
-//   storagePrivateKey
-
-// store (put storageToken, thingId) <- (data) encrypted with storagePublicKey, and signed with appPrivateKey -> OK or error
-
-// getACopy (get storageToken, thingId) <- nothing -> (data) encrypted with appPublicKey, and signed with storagePrivateKey
-
-// etc...
 
 namespace pbXStorage.Server.Controllers
 {
@@ -53,7 +15,6 @@ namespace pbXStorage.Server.Controllers
 		}
 
 #if DEBUG
-		// GET api/storage/newclient
 		[HttpGet("newclient")]
         public async Task<string> NewClient()
         {
@@ -61,39 +22,52 @@ namespace pbXStorage.Server.Controllers
         }
 #endif
 
-		// POST api/storage/registerapp
 		[HttpPost("registerapp/{clientId}")]
 		public async Task<string> RegisterApp(string clientId, [FromBody]string appPublicKey)
 		{
 			return await _manager.RegisterAppAsync(clientId, appPublicKey);
 		}
 
-		// GET api/storage/open
 		[HttpGet("open/{appToken},{storageId}")]
         public async Task<string> Open(string appToken, string storageId)
         {
 			return await _manager.OpenStorageAsync(appToken, storageId);
         }
 
-		// PUT api/storage/store
 		[HttpPut("store/{storageToken},{thingId}")]
 		public async Task<string> Store(string storageToken, string thingId, [FromBody]string data)
 		{
 			return await _manager.StoreThingAsync(storageToken, thingId, data);
 		}
 
-		// GET api/storage/getacopy
+		[HttpGet("exists/{storageToken},{thingId}")]
+		public async Task<string> Exists(string storageToken, string thingId)
+		{
+			return await _manager.ThingExistsAsync(storageToken, thingId);
+		}
+
+		[HttpGet("getmodifiedon/{storageToken},{thingId}")]
+		public async Task<string> GetModifiedOn(string storageToken, string thingId)
+		{
+			return await _manager.GetThingModifiedOnAsync(storageToken, thingId);
+		}
+
 		[HttpGet("getacopy/{storageToken},{thingId}")]
 		public async Task<string> GetACopy(string storageToken, string thingId)
 		{
 			return await _manager.GetThingCopyAsync(storageToken, thingId);
 		}
 
-		// DELETE api/storage/discard
 		[HttpDelete("discard/{storageToken},{thingId}")]
         public async Task<string> Discard(string storageToken, string thingId)
         {
 			return await _manager.DiscardThingAsync(storageToken, thingId);
+		}
+
+		[HttpGet("findids/{storageToken},{pattern}")]
+		public async Task<string> FindIds(string storageToken, string pattern)
+		{
+			return await _manager.FindThingIdsAsync(storageToken, pattern);
 		}
 	}
 }
