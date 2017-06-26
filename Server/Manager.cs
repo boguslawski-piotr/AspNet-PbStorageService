@@ -1,12 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Threading.Tasks;
-using pbXNet;
-using System.Linq;
 using System.Collections.Concurrent;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
+using System.Threading.Tasks;
+using pbXNet;
 
 // register (special util, web page, etc.) -> clientId, clientPublicKey
 // app has:
@@ -46,13 +44,13 @@ namespace pbXStorage.Server
 {
 	public class Manager
 	{
+		public string Id { get; set; } = "f406bd73571d4e11a0221d457b8589cc";
+
 		public ISerializer Serializer { get; set; }
 
+		public ISimpleCryptographer Cryptographer { get; set; }
+
 		public IDb Db { get; set; }
-
-		public Func<string, string> Encrypt;
-
-		public Func<string, string> Decrypt;
 
 		ConcurrentDictionary<string, Client> _clients = new ConcurrentDictionary<string, Client>();
 
@@ -63,13 +61,78 @@ namespace pbXStorage.Server
 		public async Task InitializeAsync()
 		{
 			if (Serializer == null || Db == null)
-			{
-				string msg = $"{nameof(Serializer)} and {nameof(Db)} must be valid objects.";
-				Log.E(msg, this);
-				throw new ArgumentException(msg);
-			}
+				throw new ArgumentException($"{nameof(Serializer)} and {nameof(Db)} must be valid objects.");
+
+			if (!Db.Initialized)
+				await Db.InitializeAsync(this);
 
 			await LoadClientsAsync();
+		}
+
+		#region Clients
+
+		const string _clientsThingId = "c235e54b577c44418ab0-948f299e8308";
+
+		readonly SemaphoreSlim _clientsLock = new SemaphoreSlim(1);
+
+		public async Task LoadClientsAsync()
+		{
+			await _clientsLock.WaitAsync().ConfigureAwait(false);
+			try
+			{
+				if (await Db.ThingExistsAsync(Id, _clientsThingId))
+				{
+					string d = await Db.GetThingCopyAsync(Id, _clientsThingId).ConfigureAwait(false);
+					if (d != null)
+					{
+						if (Cryptographer != null)
+							d = Cryptographer.Decrypt(d);
+
+						d = Obfuscator.DeObfuscate(d);
+
+						_clients = Serializer.Deserialize<ConcurrentDictionary<string, Client>>(d);
+
+						foreach (var client in _clients.Values)
+							await client.InitializeAfterDeserializeAsync(this).ConfigureAwait(false);
+
+					}
+				}
+
+				Log.I($"{_clients?.Values.Count} client(s) definition loaded.");
+			}
+			catch (Exception ex)
+			{
+				Log.E(ex.Message, this);
+				throw ex;
+			}
+			finally
+			{
+				_clientsLock.Release();
+			}
+		}
+
+		public async Task SaveClientsAsync()
+		{
+			await _clientsLock.WaitAsync().ConfigureAwait(false);
+			try
+			{
+				string d = Serializer.Serialize(_clients);
+
+				d = Obfuscator.Obfuscate(d);
+
+				if (Cryptographer != null)
+					d = Cryptographer.Encrypt(d);
+
+				await Db.StoreThingAsync(Id, _clientsThingId, d).ConfigureAwait(false);
+			}
+			catch (Exception ex)
+			{
+				Log.E(ex.Message, this);
+			}
+			finally
+			{
+				_clientsLock.Release();
+			}
 		}
 
 		public async Task<string> NewClientAsync()
@@ -84,8 +147,6 @@ namespace pbXStorage.Server
 
 				string rc = client.GetIdAndPublicKey();
 
-				//Log.I(rc);
-
 				return OK(rc);
 			}
 			catch (Exception ex)
@@ -96,19 +157,25 @@ namespace pbXStorage.Server
 			return Error("Failed to create client.");
 		}
 
+		#endregion
+
+		#region Apps
+
 		public async Task<string> RegisterAppAsync(string clientId, string appPublicKey)
 		{
 			if (_clients.TryGetValue(clientId, out Client client))
 			{
 				try
 				{
-					appPublicKey = Obfuscator.DeObfuscate(appPublicKey);
+					appPublicKey = GET(appPublicKey);
 
 					App app = _apps.Values.ToList().Find((_app) => (_app.PublicKey == appPublicKey && _app.Client == client));
 					if (app == null)
 					{
 						app = new App(this, client, appPublicKey);
 						_apps[app.Token] = app;
+
+						Log.I($"created new app '{app.Token}' for '{client.Id}'.", this);
 					}
 
 					if (app != null)
@@ -125,6 +192,10 @@ namespace pbXStorage.Server
 			return Error($"Client '{clientId}' doesn't exist.");
 		}
 
+		#endregion
+
+		#region Storages
+
 		public async Task<string> OpenStorageAsync(string appToken, string storageId)
 		{
 			if (_apps.TryGetValue(appToken, out App app))
@@ -136,10 +207,16 @@ namespace pbXStorage.Server
 					{
 						storage = new Storage(this, app, storageId);
 						_storages[storage.Token] = storage;
+
+						Log.I($"created '{storageId}' for app '{app.Token}'.", this);
 					}
 
 					if (storage != null)
+					{
+						Log.I($"opened '{storageId}' for app '{app.Token}'.", this);
+
 						return OK(storage.TokenAndPublicKey);
+					}
 				}
 				catch (Exception ex)
 				{
@@ -151,6 +228,8 @@ namespace pbXStorage.Server
 
 			return Error($"Incorrect application token '{appToken}'.");
 		}
+
+		#endregion
 
 		#region Things
 
@@ -176,9 +255,7 @@ namespace pbXStorage.Server
 		{
 			return await ExecuteInStorage(storageToken, async (Storage storage) =>
 			{
-				data = Obfuscator.DeObfuscate(data);
-
-				await storage.StoreAsync(thingId, data).ConfigureAwait(false);
+				await storage.StoreAsync(thingId, GET(data)).ConfigureAwait(false);
 				return OK();
 			}).ConfigureAwait(false);
 		}
@@ -228,67 +305,15 @@ namespace pbXStorage.Server
 
 		#region Tools
 
-		readonly SemaphoreSlim _clientsLock = new SemaphoreSlim(1);
-
-		public async Task LoadClientsAsync()
+		string GET(string data)
 		{
-			await _clientsLock.WaitAsync().ConfigureAwait(false);
-			try
-			{
-				string d = await Db.GetClientsAsync();
-				if (d != null)
-				{
-					if(Decrypt != null)
-						d = Decrypt(d);
-
-					d = Obfuscator.DeObfuscate(d);
-
-					_clients = Serializer.Deserialize<ConcurrentDictionary<string, Client>>(d);
-
-					foreach (var client in _clients.Values)
-						await client.InitializeAfterDeserializeAsync(this).ConfigureAwait(false);
-
-					Log.I($"{_clients.Values.Count} client(s) definition loaded.");
-				}
-			}
-			catch (Exception ex)
-			{
-				Log.E(ex.Message, this);
-				throw ex;
-			}
-			finally
-			{
-				_clientsLock.Release();
-			}
+			return Obfuscator.DeObfuscate(data);
 		}
 
-		public async Task SaveClientsAsync()
-		{
-			await _clientsLock.WaitAsync().ConfigureAwait(false);
-			try
-			{
-				string d = Serializer.Serialize(_clients);
-
-				d = Obfuscator.Obfuscate(d);
-
-				if(Encrypt != null)
-					d = Encrypt(d);
-
-				await Db.StoreClientsAsync(d).ConfigureAwait(false);
-			}
-			catch (Exception ex)
-			{
-				Log.E(ex.Message, this);
-			}
-			finally
-			{
-				_clientsLock.Release();
-			}
-		}
-
-		string OK(string data = null)
+		string OK(string data = null, [CallerMemberName]string callerName = null)
 		{
 			data = "OK" + (data != null ? $",{data}" : "");
+			Log.I(data, this, callerName);
 			return Obfuscator.Obfuscate(data);
 		}
 

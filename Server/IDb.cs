@@ -9,16 +9,13 @@ namespace pbXStorage.Server
 		bool Initialized { get; }
 		Task InitializeAsync(Manager manager);
 
-		Task StoreClientsAsync(string clientsData);
-		Task<string> GetClientsAsync();
+		Task StoreThingAsync(string storageId, string thingId, string data);
+		Task<bool> ThingExistsAsync(string storageId, string thingId);
+		Task<DateTime> GetThingModifiedOnAsync(string storageId, string thingId);
+		Task SetThingModifiedOnAsync(string storageId, string thingId, DateTime modifiedOn);
+		Task<string> GetThingCopyAsync(string storageId, string thingId);
+		Task DiscardThingAsync(string storageId, string thingId);
 
-		Task StoreThingAsync(Storage storage, string thingId, string data);
-		Task<bool> ThingExistsAsync(Storage storage, string thingId);
-		Task<DateTime> GetThingModifiedOnAsync(Storage storage, string thingId);
-		Task SetThingModifiedOnAsync(Storage storage, string thingId, DateTime modifiedOn);
-		Task<string> GetThingCopyAsync(Storage storage, string thingId);
-		Task DiscardThingAsync(Storage storage, string thingId);
-
-		Task<IEnumerable<string>> FindThingIdsAsync(Storage storage, string pattern);
+		Task<IEnumerable<string>> FindThingIdsAsync(string storageId, string pattern);
 	};
 }

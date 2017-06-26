@@ -17,9 +17,12 @@ Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Server", "Server\Server.shp
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Test.NETStd", "Test.NETStd\Test.NETStd.csproj", "{FB1EC68D-2E61-4E27-97AE-C5CDC8AD2F23}"
 EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Server.ASP", "Server.ASP\Server.ASP.shproj", "{7BF3806E-FBD2-4F7D-9289-F63F3DFB6FAE}"
+EndProject
 Global
 	GlobalSection(SharedMSBuildProjectFiles) = preSolution
 		..\pbX\pbXNet\pbXNet.Shared.projitems*{0f24cc4f-7a9b-4835-8f00-4dc291773539}*SharedItemsImports = 13
+		Server.ASP\Server.ASP.projitems*{7bf3806e-fbd2-4f7d-9289-f63f3dfb6fae}*SharedItemsImports = 13
 		Server\Server.projitems*{91467c6a-aead-44cb-a6dd-76843369c45b}*SharedItemsImports = 13
 		..\pbX\pbXNet\pbXNet.Shared.projitems*{ba60d111-a7e1-4455-b192-450846976d49}*SharedItemsImports = 4
 	EndGlobalSection

@@ -9,11 +9,11 @@ using pbXNet;
 
 namespace pbXStorage.Server
 {
-	public class PbXNetILogger2MicrosoftExtensionsLoggingILogger : pbXNet.ILogger
+	class ILogger2MicrosoftILogger : pbXNet.ILogger
 	{
 		Microsoft.Extensions.Logging.ILogger _logger;
 
-		public PbXNetILogger2MicrosoftExtensionsLoggingILogger(Microsoft.Extensions.Logging.ILogger logger)
+		public ILogger2MicrosoftILogger(Microsoft.Extensions.Logging.ILogger logger)
 		{
 			_logger = logger;
 		}
@@ -39,6 +39,19 @@ namespace pbXStorage.Server
 		}
 	}
 
+	class SimpleCryptographer2DataProtector : ISimpleCryptographer
+	{
+		IDataProtector _protector;
+
+		public SimpleCryptographer2DataProtector(IDataProtector protector)
+		{
+			_protector = protector;
+		}
+
+		public string Encrypt(string data) => _protector.Protect(data);
+		public string Decrypt(string data) => _protector.Unprotect(data);
+	}
+
 	public class Startup
 	{
 		public IConfigurationRoot Configuration { get; }
@@ -58,13 +71,21 @@ namespace pbXStorage.Server
 		public void ConfigureServices(IServiceCollection services)
 		{
 			// Add framework services.
-			services.AddMvc();
 
-			//DataProtectionOptions a = new DataProtectionOptions();
+			services.AddMvc();
 			services.AddDataProtection();
 
 			// Add pbXStorage manager.
-			services.AddSingleton(new Manager());
+
+			IServiceProvider applicationServices = services.BuildServiceProvider();
+			IDataProtector protector = applicationServices.GetDataProtector(new string[] { "pbXStorage", "Server", "v1" });
+
+			services.AddSingleton(
+				new Manager()
+					.UseSimpleCryptographer(new SimpleCryptographer2DataProtector(protector))
+					.UseNewtonsoftJSonSerializer()
+					.UseDb<DbOnFileSystem>()
+			);
 		}
 
 		// This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -78,24 +99,15 @@ namespace pbXStorage.Server
 			// Create bridge from pbXNet logging system to ASP.NET logging system.
 
 			Microsoft.Extensions.Logging.ILogger logger = loggerFactory.CreateLogger("pbXStorage.Server");
-			Log.AddLogger(new PbXNetILogger2MicrosoftExtensionsLoggingILogger(logger));
+			Log.AddLogger(new ILogger2MicrosoftILogger(logger));
 
 			// Use MVC framework.
 
 			app.UseMvc();
 
-			// Configure/initialize pbXStorage.
-
-			IDataProtector protector = app.ApplicationServices.GetDataProtector(new string[] { "pbXStorage", "Server", "v1" });
+			// Initialize pbXStorage.
 
 			Manager manager = app.ApplicationServices.GetService<Manager>();
-
-			manager.Serializer = new NewtonsoftJsonSerializer();
-			manager.Decrypt = protector.Unprotect;
-			manager.Encrypt = protector.Protect;
-
-			await manager.UseDbAsync<DbOnFileSystem>();
-
 			await manager.InitializeAsync();
 		}
 	}

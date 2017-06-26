@@ -1,7 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Text;
-using System.Threading;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using pbXNet;
 
@@ -41,6 +42,8 @@ namespace pbXStorage.Server
 			}
 		}
 
+		public string IdForDb => Path.Combine(App.Client.Id, Id);
+
 		public string Sign(string data)
 		{
 			return RsaCryptographerHelper.Sign(data, _keys);
@@ -49,6 +52,11 @@ namespace pbXStorage.Server
 		public string Decrypt(string data)
 		{
 			return RsaCryptographerHelper.Decrypt(data, _keys);
+		}
+
+		string PrepareThingId(string thingId)
+		{
+			return Regex.Replace(thingId, "[\\/:*?<>|]", "-");
 		}
 
 		public async Task StoreAsync(string thingId, string data)
@@ -66,26 +74,26 @@ namespace pbXStorage.Server
 			DateTime modifiedOn = DateTime.FromBinary(long.Parse(modifiedOnAndData[0]));
 			data = modifiedOnAndData[1];
 
-			await Manager.Db.StoreThingAsync(this, thingId, data).ConfigureAwait(false);
-			await Manager.Db.SetThingModifiedOnAsync(this, thingId, modifiedOn.ToUniversalTime()).ConfigureAwait(false);
+			await Manager.Db.StoreThingAsync(IdForDb, thingId, data).ConfigureAwait(false);
+			await Manager.Db.SetThingModifiedOnAsync(IdForDb, thingId, modifiedOn.ToUniversalTime()).ConfigureAwait(false);
 		}
 
 		public async Task<string> ExistsAsync(string thingId)
 		{
-			bool exists = await Manager.Db.ThingExistsAsync(this, thingId).ConfigureAwait(false);
+			bool exists = await Manager.Db.ThingExistsAsync(IdForDb, thingId).ConfigureAwait(false);
 			return exists ? "YES" : "NO";
 		}
 
 		public async Task<string> GetModifiedOnAsync(string thingId)
 		{
-			DateTime modifiedOn = await Manager.Db.GetThingModifiedOnAsync(this, thingId).ConfigureAwait(false);
+			DateTime modifiedOn = await Manager.Db.GetThingModifiedOnAsync(IdForDb, thingId).ConfigureAwait(false);
 			return modifiedOn.ToUniversalTime().ToBinary().ToString();
 		}
 
 		public async Task<string> GetACopyAsync(string thingId)
 		{
-			string data = await Manager.Db.GetThingCopyAsync(this, thingId).ConfigureAwait(false);
-			DateTime modifiedOn = await Manager.Db.GetThingModifiedOnAsync(this, thingId).ConfigureAwait(false);
+			string data = await Manager.Db.GetThingCopyAsync(IdForDb, thingId).ConfigureAwait(false);
+			DateTime modifiedOn = await Manager.Db.GetThingModifiedOnAsync(IdForDb, thingId).ConfigureAwait(false);
 
 			data = $"{modifiedOn.ToUniversalTime().ToBinary().ToString()},{data}";
 
@@ -97,7 +105,7 @@ namespace pbXStorage.Server
 
 		public async Task DiscardAsync(string thingId)
 		{
-			await Manager.Db.DiscardThingAsync(this, thingId).ConfigureAwait(false);
+			await Manager.Db.DiscardThingAsync(IdForDb, thingId).ConfigureAwait(false);
 		}
 
 		public async Task<string> FindIdsAsync(string pattern)
@@ -105,7 +113,7 @@ namespace pbXStorage.Server
 			if (string.IsNullOrWhiteSpace(pattern))
 				pattern = "";
 
-			IEnumerable<string> ids = await Manager.Db.FindThingIdsAsync(this, pattern).ConfigureAwait(false);
+			IEnumerable<string> ids = await Manager.Db.FindThingIdsAsync(IdForDb, pattern).ConfigureAwait(false);
 
 			StringBuilder sids = null;
 			foreach (var id in ids)

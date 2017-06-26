@@ -3,7 +3,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.CompilerServices;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using pbXNet;
@@ -26,11 +25,13 @@ namespace pbXStorage.Server
 		public DbOnFileSystem(Manager manager) 
 			: base(manager)
 		{
+			if(manager == null)
+				throw new ArgumentException($"{nameof(manager)} must be valid object.");
 		}
 
 		public Task InitializeAsync(Manager manager)
 		{
-			Manager = manager;
+			Manager = manager ?? throw new ArgumentException($"{nameof(manager)} must be valid object.");
 
 			string homePath = Environment.GetEnvironmentVariable("HOME");
 			if (homePath == null)
@@ -43,42 +44,16 @@ namespace pbXStorage.Server
 			return Task.FromResult(true);
 		}
 
-		async Task<IFileSystem> GetFs(Storage storage)
+		async Task<IFileSystem> GetFs(string storageId)
 		{
 			IFileSystem fs = await _fs.CloneAsync();
 
 			await fs.CreateDirectoryAsync(".pbXStorage").ConfigureAwait(false);
 
-			if (storage != null)
-			{
-				await fs.CreateDirectoryAsync(storage.App.Client.Id).ConfigureAwait(false);
-				await fs.CreateDirectoryAsync(storage.Id).ConfigureAwait(false);
-			}
+			if (!string.IsNullOrWhiteSpace(storageId))
+				await fs.CreateDirectoryAsync(storageId).ConfigureAwait(false);
 
 			return fs;
-		}
-
-
-		const string _clientsFileName = ".clients";
-
-		public async Task<string> GetClientsAsync()
-		{
-			IFileSystem fs = await GetFs(null).ConfigureAwait(false);
-			if (await fs.FileExistsAsync(_clientsFileName).ConfigureAwait(false))
-				return await fs.ReadTextAsync(_clientsFileName).ConfigureAwait(false);
-			return null;
-		}
-
-		public async Task StoreClientsAsync(string clientsData)
-		{
-			IFileSystem fs = await GetFs(null);
-			await fs.WriteTextAsync(_clientsFileName, clientsData);
-		}
-
-
-		string PrepareFileName(string thingId)
-		{
-			return Regex.Replace(thingId, "[\\/:*?<>|]", "-");
 		}
 
 		SemaphoreSlim GetLock(IFileSystem fs, string thingId)
@@ -94,9 +69,9 @@ namespace pbXStorage.Server
 			return _lock;
 		}
 
-		async Task<string> ExecuteInLock(Storage storage, string thingId, Func<IFileSystem, Task<string>> action, [CallerMemberName]string callerName = null)
+		async Task<string> ExecuteInLock(string storageId, string thingId, Func<IFileSystem, Task<string>> action, [CallerMemberName]string callerName = null)
 		{
-			IFileSystem fs = await GetFs(storage).ConfigureAwait(false);
+			IFileSystem fs = await GetFs(storageId).ConfigureAwait(false);
 			SemaphoreSlim _lock = GetLock(fs, thingId);
 			await _lock.WaitAsync().ConfigureAwait(false);
 			try
@@ -110,20 +85,21 @@ namespace pbXStorage.Server
 			}
 		}
 
-		public async Task StoreThingAsync(Storage storage, string thingId, string data)
+		public async Task StoreThingAsync(string storageId, string thingId, string data)
 		{
-			await ExecuteInLock(storage, thingId, async (IFileSystem fs) =>
+			await ExecuteInLock(storageId, thingId, async (IFileSystem fs) =>
 			{
-				data = Manager != null && Manager.Encrypt != null ? Manager.Encrypt(data) : data;
+				data = Manager.Cryptographer != null ? Manager.Cryptographer.Encrypt(data) : data;
+
 				await fs.WriteTextAsync(thingId, data).ConfigureAwait(false);
 				return null;
 			})
 			.ConfigureAwait(false);
 		}
 
-		public async Task<bool> ThingExistsAsync(Storage storage, string thingId)
+		public async Task<bool> ThingExistsAsync(string storageId, string thingId)
 		{
-			string rc = await ExecuteInLock(storage, thingId, async (IFileSystem fs) =>
+			string rc = await ExecuteInLock(storageId, thingId, async (IFileSystem fs) =>
 			{
 				bool exists = await fs.FileExistsAsync(thingId).ConfigureAwait(false);
 				return exists ? "YES" : "NO";
@@ -133,9 +109,9 @@ namespace pbXStorage.Server
 			return rc == "YES";
 		}
 
-		public async Task<DateTime> GetThingModifiedOnAsync(Storage storage, string thingId)
+		public async Task<DateTime> GetThingModifiedOnAsync(string storageId, string thingId)
 		{
-			string rc = await ExecuteInLock(storage, thingId, async (IFileSystem fs) =>
+			string rc = await ExecuteInLock(storageId, thingId, async (IFileSystem fs) =>
 			{
 				DateTime modifiedOn = await fs.GetFileModifiedOnAsync(thingId).ConfigureAwait(false);
 				return modifiedOn.ToBinary().ToString();
@@ -145,9 +121,9 @@ namespace pbXStorage.Server
 			return DateTime.FromBinary(long.Parse(rc));
 		}
 
-		public async Task SetThingModifiedOnAsync(Storage storage, string thingId, DateTime modifiedOn)
+		public async Task SetThingModifiedOnAsync(string storageId, string thingId, DateTime modifiedOn)
 		{
-			await ExecuteInLock(storage, thingId, async (IFileSystem fs) =>
+			await ExecuteInLock(storageId, thingId, async (IFileSystem fs) =>
 			{
 				await fs.SetFileModifiedOnAsync(thingId, modifiedOn).ConfigureAwait(false);
 				return null;
@@ -155,24 +131,25 @@ namespace pbXStorage.Server
 			.ConfigureAwait(false);
 		}
 
-		public async Task<string> GetThingCopyAsync(Storage storage, string thingId)
+		public async Task<string> GetThingCopyAsync(string storageId, string thingId)
 		{
-			return await ExecuteInLock(storage, thingId, async (IFileSystem fs) =>
+			return await ExecuteInLock(storageId, thingId, async (IFileSystem fs) =>
 			{
 				if (!await fs.FileExistsAsync(thingId).ConfigureAwait(false))
-					throw new Exception($"'{storage.Id}/{thingId}' was not found.");
+					throw new Exception($"'{storageId}/{thingId}' was not found.");
 
 				string data = await fs.ReadTextAsync(thingId).ConfigureAwait(false);
-				data = Manager != null && Manager.Decrypt != null ? Manager.Decrypt(data) : data;
+
+				data = Manager.Cryptographer != null ? Manager.Cryptographer.Decrypt(data) : data;
 
 				return data;
 			})
 			.ConfigureAwait(false);
 		}
 
-		public async Task DiscardThingAsync(Storage storage, string thingId)
+		public async Task DiscardThingAsync(string storageId, string thingId)
 		{
-			await ExecuteInLock(storage, thingId, async (IFileSystem fs) =>
+			await ExecuteInLock(storageId, thingId, async (IFileSystem fs) =>
 			{
 				await fs.DeleteFileAsync(thingId).ConfigureAwait(false);
 				return null;
@@ -180,9 +157,9 @@ namespace pbXStorage.Server
 			.ConfigureAwait(false);
 		}
 
-		public async Task<IEnumerable<string>> FindThingIdsAsync(Storage storage, string pattern)
+		public async Task<IEnumerable<string>> FindThingIdsAsync(string storageId, string pattern)
 		{
-			IFileSystem fs = await GetFs(storage).ConfigureAwait(false);
+			IFileSystem fs = await GetFs(storageId).ConfigureAwait(false);
 			return await fs.GetFilesAsync(pattern).ConfigureAwait(false);
 		}
 	}
