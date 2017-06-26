@@ -3,7 +3,7 @@
   <PropertyGroup>
     <TargetFramework>net461</TargetFramework>
     <RuntimeIdentifier>win7-x86</RuntimeIdentifier>
-    <AssemblyName>pbXStorage.Server.NET</AssemblyName>
+    <AssemblyName>pbXStorage.Server.ASP.NET</AssemblyName>
     <RootNamespace>pbXStorage.Server</RootNamespace>
     <Authors>Piotr Boguslawski</Authors>
     <Company />

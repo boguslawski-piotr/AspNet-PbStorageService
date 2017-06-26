@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>netcoreapp1.1</TargetFramework>
-    <AssemblyName>pbXStorage.Server.NETStd</AssemblyName>
+    <AssemblyName>pbXStorage.Server.ASP.NETCore</AssemblyName>
     <RootNamespace>pbXStorage.Server</RootNamespace>
     <Authors>Piotr Boguslawski</Authors>
     <Company />

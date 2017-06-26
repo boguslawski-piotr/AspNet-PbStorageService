@@ -9,21 +9,17 @@ namespace Test.NETStd
 {
 	class Program
 	{
-		static readonly char[] commaCharArray = { ',' };
-
-		static HttpClient http = new HttpClient();
 		static Uri ApiUri = new Uri("http://localhost:50768/api/storage/");
 
-		// generated in app, should be stored in a safe way
+		// generated in app
 		static IAsymmetricCryptographerKeyPair appKeys;
 
-		// given from pbXStorage registration tool/web site
+		// given from pbXStorage admin tool/web site
 		static string clientId;
 		static IAsymmetricCryptographerKeyPair clientPblKey;
 
 		// given from server during communication
 		static string appToken;
-
 		static string storageToken;
 		static IAsymmetricCryptographerKeyPair storagePblKey;
 
@@ -33,69 +29,6 @@ namespace Test.NETStd
 		{
 			cryptographer = new RsaCryptographer();
 			appKeys = cryptographer.GenerateKeyPair();
-
-			http.Timeout = TimeSpan.FromSeconds(30);
-		}
-
-		static async Task<string> ExecuteCommandAsync(string cmd, Uri uri, HttpContent content = null)
-		{
-			try
-			{
-				Console.WriteLine($"REQUEST: {cmd}: {uri}");
-				//Log.I($"REQUEST: {cmd}: {uri}", this);
-
-				HttpResponseMessage response = null;
-				switch (cmd)
-				{
-					case "GET":
-						response = await http.GetAsync(uri);
-						break;
-					case "POST":
-						response = await http.PostAsync(uri, content);
-						break;
-					case "PUT":
-						response = await http.PutAsync(uri, content);
-						break;
-					case "DELETE":
-						response = await http.DeleteAsync(uri);
-						break;
-				}
-
-				if (response != null)
-				{
-					Console.Write("RESPONSE: ");
-
-					if (response.IsSuccessStatusCode)
-					{
-						var responseContent = await response.Content.ReadAsStringAsync();
-						responseContent = Obfuscator.DeObfuscate(responseContent);
-
-						Console.WriteLine($"{responseContent}");
-
-						string[] contentData = responseContent.Split(commaCharArray, 2);
-						if (contentData[0] == "ERROR")
-						{
-							throw new StorageOnPbXStorageException(contentData[1]);
-						}
-
-						return contentData.Length > 1 ? contentData[1] : null;
-					}
-					else
-						throw new StorageOnPbXStorageException($"Failed to read data. Error: {response.StatusCode}.");
-				}
-				else
-					throw new StorageOnPbXStorageException($"Command {cmd} unrecognized.");
-			}
-			catch (Exception ex)
-			{
-				string message = $"{ex.Message}";
-				if (ex.InnerException != null)
-					message += $"\n{ex.InnerException.Message + (ex.InnerException.Message.EndsWith(".") ? "" : ".")}";
-#if DEBUG
-				message += $"\n{cmd}: {uri}";
-#endif
-				throw new StorageOnPbXStorageException(message);
-			}
 		}
 
 		static async Task NewClientTestAsync()
@@ -111,8 +44,8 @@ namespace Test.NETStd
 			//clientId = clientData[0];
 			//clientPblKey = new RsaKeyPair(null, clientData[1]);
 
-			clientId = "a2b3dbe294614443b87c01e138efdd19636340318999174557";
-			clientPblKey = new RsaKeyPair(null, "FZLHEUQxCEMr+jMkAz4S+y9pvWeCngTf9wECAH5frri6ZQemFqBHnaM+XRJ40grEL8WJKYoVaYy6doQHVW1H5QqEGLlDXjIjWlurt2eX45rAlNQJHkE/OM3p4hhKEG5oqdEHA5by+gx6h4Zk7OBjKjMnVSKRHdah+/pfPdzb3i5soxLBM9xqZ7qX575J2648HCF+WHPLn4Hsy8Um5GqxQARVnc9I+l6cowy3jYMEFnMWhXPOPnlWvgiYh/pFgZEP5qFVd1zCmXVmuUiFXfYCrKXVEXrQ40rGdMOUUJ+0019SRmlTuYAim5R15YLBRMzCc4L3IN2mY9QR3p1EU89CIyude1HGffTccKp13+NHQAu5BN7lMlmVrd5xFfwF8PDqyBQKyGre5v8H/AA=");
+			clientId = "74a95bc46f8e41b7922a6c4ce686a94e636340738013649305";
+			clientPblKey = new RsaKeyPair(null, "FZLHEUQxCEMr+jOY7CPB9F/SskeSLL3x931wAOB8X8wpZ3ivCSXy2jsEpsXsfc0VmrTPv4M6lI/1sCkhG6TaFE7ihBB6scbpw1Xt5apRopJvrC4+nsupAzvijHO6DWWgGkDnEYhGG62iDHHcgzNZyRRUg1zm4XaFrwG8uUOo2JZKTfMsHRSEZA+aV1BKWci31DkXIc6T86DmxVvD691qvb7o7QS9E3ULkdTQGHHbSMysidcHPd3E0K+M4ehKs7wtcvY2ZFdVYk20nU1YN5yfs29ykYR90uwq5eK8QNJFN5dPw8YU2uR+eyGjwXB6pk0kHXq9WikwkjwuDcEO3cuiup7IOK+QALa2c4BYN5EvlSW80/z7oVdFpshLtqzl+Bw65j29t2JF+wN+");
 
 			Console.WriteLine();
 			Console.WriteLine($"Client: {clientId} with public key: {clientPblKey.Public}");
@@ -134,7 +67,7 @@ namespace Test.NETStd
 
 			var postData = new StringContent($"'{data}'", Encoding.UTF8, "application/json");
 
-			string response = await ExecuteCommandAsync(httpcmd, uri, postData);
+			string response = await pbXStorage.Client.Tools.ExecuteCommandAsync(httpcmd, uri, postData);
 
 			appToken = response;
 
@@ -150,9 +83,9 @@ namespace Test.NETStd
 
 			Uri uri = new Uri(ApiUri, $"{cmd}/{appToken},{storageId}");
 
-			string response = await ExecuteCommandAsync(httpcmd, uri);
+			string response = await pbXStorage.Client.Tools.ExecuteCommandAsync(httpcmd, uri);
 
-			string[] storageData = response.Split(commaCharArray, 2);
+			string[] storageData = response.Split(pbXStorage.Client.Tools.commaCharArray, 2);
 
 			string signature = storageData[0];
 			string data = storageData[1];
@@ -166,7 +99,7 @@ namespace Test.NETStd
 
 			data = RsaCryptographerHelper.Decrypt(data, appKeys);
 
-			string[] storageTokenAndPublicKey = data.Split(commaCharArray, 2);
+			string[] storageTokenAndPublicKey = data.Split(pbXStorage.Client.Tools.commaCharArray, 2);
 			storageToken = storageTokenAndPublicKey[0];
 			storagePblKey = new RsaKeyPair(null, storageTokenAndPublicKey[1]);
 
@@ -196,7 +129,7 @@ namespace Test.NETStd
 
 			var postData = new StringContent($"'{data}'", Encoding.UTF8, "application/json");
 
-			await ExecuteCommandAsync(httpcmd, uri, postData);
+			await pbXStorage.Client.Tools.ExecuteCommandAsync(httpcmd, uri, postData);
 
 			Console.WriteLine();
 		}
@@ -208,7 +141,7 @@ namespace Test.NETStd
 
 			Uri uri = new Uri(ApiUri, $"{cmd}/{storageToken},{thingId}");
 
-			string response = await ExecuteCommandAsync(httpcmd, uri);
+			string response = await pbXStorage.Client.Tools.ExecuteCommandAsync(httpcmd, uri);
 			// response == YES or NO
 
 			Console.WriteLine();
@@ -221,7 +154,7 @@ namespace Test.NETStd
 
 			Uri uri = new Uri(ApiUri, $"{cmd}/{storageToken},{thingId}");
 
-			string response = await ExecuteCommandAsync(httpcmd, uri);
+			string response = await pbXStorage.Client.Tools.ExecuteCommandAsync(httpcmd, uri);
 			// response == DateTime as binary
 
 			DateTime modifiedOn = DateTime.FromBinary(long.Parse(response));
@@ -239,9 +172,9 @@ namespace Test.NETStd
 
 			Uri uri = new Uri(ApiUri, $"{cmd}/{storageToken},{thingId}");
 
-			string response = await ExecuteCommandAsync(httpcmd, uri);
+			string response = await pbXStorage.Client.Tools.ExecuteCommandAsync(httpcmd, uri);
 
-			string[] signatureAndData = response.Split(commaCharArray, 2);
+			string[] signatureAndData = response.Split(pbXStorage.Client.Tools.commaCharArray, 2);
 			string signature = signatureAndData[0];
 			string thingData = signatureAndData[1];
 
@@ -258,7 +191,7 @@ namespace Test.NETStd
 			Console.WriteLine();
 			Console.WriteLine($"Thing all data: {thingData}");
 
-			string[] modifiedOnAndData = thingData.Split(commaCharArray, 2);
+			string[] modifiedOnAndData = thingData.Split(pbXStorage.Client.Tools.commaCharArray, 2);
 			DateTime modifiedOn = DateTime.FromBinary(long.Parse(modifiedOnAndData[0]));
 			DateTime localModifiedOn = modifiedOn.ToLocalTime();
 			thingData = modifiedOnAndData[1];
@@ -275,7 +208,7 @@ namespace Test.NETStd
 
 			Uri uri = new Uri(ApiUri, $"{cmd}/{storageToken},{thingId}");
 
-			await ExecuteCommandAsync(httpcmd, uri);
+			await pbXStorage.Client.Tools.ExecuteCommandAsync(httpcmd, uri);
 
 			Console.WriteLine();
 		}
@@ -292,14 +225,14 @@ namespace Test.NETStd
 
 			Uri uri = new Uri(ApiUri, $"{cmd}/{storageToken},{pattern}");
 
-			string response = await ExecuteCommandAsync(httpcmd, uri);
+			string response = await pbXStorage.Client.Tools.ExecuteCommandAsync(httpcmd, uri);
 			// response == null or encrypted/signed id list with separator |
 
 			Console.WriteLine();
 
 			if (response != null)
 			{
-				string[] signatureAndIds = response.Split(commaCharArray, 2);
+				string[] signatureAndIds = response.Split(pbXStorage.Client.Tools.commaCharArray, 2);
 				string signature = signatureAndIds[0];
 				string ids = signatureAndIds[1];
 
