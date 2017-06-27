@@ -11,13 +11,17 @@ namespace pbXStorage.Client
     {
 		public static readonly char[] commaCharArray = { ',' };
 
-		public static HttpClient httpClient = new HttpClient();
+		public static HttpClient httpClient;
 
 		public static bool QuietMode = false;
 
 		public static async Task<string> ExecuteCommandAsync(string cmd, Uri uri, HttpContent content = null)
 		{
-			httpClient.Timeout = TimeSpan.FromSeconds(30);
+			if (httpClient == null)
+			{
+				httpClient = new HttpClient();
+				httpClient.Timeout = TimeSpan.FromSeconds(30);
+			}
 
 			try
 			{

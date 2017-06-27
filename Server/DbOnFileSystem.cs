@@ -11,7 +11,7 @@ namespace pbXStorage.Server
 {
 	public class DbOnFileSystem : ManagedObject, IDb
 	{
-		public bool Initialized { get; private set;  }
+		public bool Initialized { get; private set; }
 
 		IFileSystem _fs;
 
@@ -22,10 +22,10 @@ namespace pbXStorage.Server
 		{
 		}
 
-		public DbOnFileSystem(Manager manager) 
+		public DbOnFileSystem(Manager manager)
 			: base(manager)
 		{
-			if(manager == null)
+			if (manager == null)
 				throw new ArgumentException($"{nameof(manager)} must be valid object.");
 		}
 
@@ -34,8 +34,12 @@ namespace pbXStorage.Server
 			Manager = manager ?? throw new ArgumentException($"{nameof(manager)} must be valid object.");
 
 			string homePath = Environment.GetEnvironmentVariable("HOME");
-			if (homePath == null)
-				homePath = Environment.GetEnvironmentVariable("HOMEPATH");
+			if (string.IsNullOrWhiteSpace(homePath))
+				homePath = Environment.GetEnvironmentVariable("USERPROFILE");
+			if (string.IsNullOrWhiteSpace(homePath))
+				homePath = Path.Combine(Environment.GetEnvironmentVariable("HOMEDRIVE"), Environment.GetEnvironmentVariable("HOMEPATH"));
+			if (string.IsNullOrWhiteSpace(homePath))
+				throw new DirectoryNotFoundException("Can not find home directory.");
 
 			_fs = new DeviceFileSystem(DeviceFileSystemRoot.UserDefined, homePath);
 
