@@ -320,6 +320,26 @@ namespace Test.NETStd
 		{
 			StartTestsAsync();
 
+			// RSA
+
+			//RsaCryptographer c = new RsaCryptographer();
+			//IAsymmetricCryptographerKeyPair keys = c.GenerateKeyPair();
+
+			//RsaKeyPair rkeysprv = new RsaKeyPair(keys.Private, null);
+			//RsaKeyPair rkeyspbl = new RsaKeyPair(null, keys.Public);
+
+			//ByteBuffer b = c.Encrypt(new ByteBuffer("01234567890123456789012345678901234567890123456789012345678912345!", Encoding.UTF8), rkeyspbl);
+			//Console.WriteLine(b.ToHexString());
+
+			//ByteBuffer s = c.Sign(b, rkeysprv);
+			//Console.WriteLine(s.ToHexString());
+
+			//bool ok = c.Verify(b, s, rkeyspbl);
+			//Console.WriteLine($"{ok}");
+
+			//string d = c.Decrypt(b, rkeysprv).ToString(Encoding.UTF8);
+			//Console.WriteLine(d);
+
 			Console.ReadKey();
 		}
 	}

@@ -89,7 +89,7 @@ namespace pbXStorage.Server
 		}
 
 		// This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-		public async void Configure(IApplicationBuilder app, IHostingEnvironment env, ILoggerFactory loggerFactory)
+		public async void Configure(IApplicationBuilder app, IHostingEnvironment env, ILoggerFactory loggerFactory, Manager manager)
 		{
 			// Create ASP.NET standard loggers.
 
@@ -107,7 +107,7 @@ namespace pbXStorage.Server
 
 			// Initialize pbXStorage.
 
-			Manager manager = app.ApplicationServices.GetService<Manager>();
+			//Manager manager = app.ApplicationServices.GetService<Manager>();
 			await manager.InitializeAsync();
 		}
 	}
