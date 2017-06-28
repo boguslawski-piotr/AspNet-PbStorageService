@@ -44,7 +44,17 @@ namespace pbXStorage.Server
 {
 	public class Manager
 	{
-		public string Id { get; set; } = "f406bd73571d4e11a0221d457b8589cc";
+		string _id = "f406bd73571d4e11a0221d457b8589cc";
+		public string Id {
+			get => _id;
+			set {
+				if (value != null)
+				{
+					_id = value;
+					Log.I($"Id is set to: {_id}'.", this);
+				}
+			}
+		} 
 
 		public ISerializer Serializer { get; set; }
 
@@ -64,7 +74,7 @@ namespace pbXStorage.Server
 				throw new ArgumentException($"{nameof(Serializer)} and {nameof(Db)} must be valid objects.");
 
 			if (!Db.Initialized)
-				await Db.InitializeAsync(this);
+				await Db.InitializeAsync();
 
 			await LoadClientsAsync();
 		}
@@ -98,7 +108,7 @@ namespace pbXStorage.Server
 					}
 				}
 
-				Log.I($"{_clients?.Values.Count} client(s) definition loaded.");
+				Log.I($"{_clients?.Values.Count} client(s) definition loaded.", this);
 			}
 			catch (Exception ex)
 			{

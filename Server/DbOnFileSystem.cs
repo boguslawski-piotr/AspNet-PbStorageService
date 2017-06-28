@@ -13,37 +13,38 @@ namespace pbXStorage.Server
 	{
 		public bool Initialized { get; private set; }
 
+		string _homePath;
+
+		const string _dbDirectory = ".pbXStorage";
+
 		IFileSystem _fs;
 
 		ConcurrentDictionary<string, SemaphoreSlim> _locks = new ConcurrentDictionary<string, SemaphoreSlim>();
 
-		public DbOnFileSystem()
-			: base(null)
-		{
-		}
-
-		public DbOnFileSystem(Manager manager)
+		public DbOnFileSystem(Manager manager = null, string homePath = null)
 			: base(manager)
 		{
-			if (manager == null)
-				throw new ArgumentException($"{nameof(manager)} must be valid object.");
+			_homePath = homePath;
 		}
 
-		public Task InitializeAsync(Manager manager)
+		public Task InitializeAsync()
 		{
-			Manager = manager ?? throw new ArgumentException($"{nameof(manager)} must be valid object.");
+			if (_homePath == null)
+			{
+				_homePath = Environment.GetEnvironmentVariable("HOME");
+				if (string.IsNullOrWhiteSpace(_homePath))
+					_homePath = Environment.GetEnvironmentVariable("USERPROFILE");
+				if (string.IsNullOrWhiteSpace(_homePath))
+					_homePath = Path.Combine(Environment.GetEnvironmentVariable("HOMEDRIVE"), Environment.GetEnvironmentVariable("HOMEPATH"));
+				if (string.IsNullOrWhiteSpace(_homePath))
+					throw new DirectoryNotFoundException("Can not find home directory.");
+			}
 
-			string homePath = Environment.GetEnvironmentVariable("HOME");
-			if (string.IsNullOrWhiteSpace(homePath))
-				homePath = Environment.GetEnvironmentVariable("USERPROFILE");
-			if (string.IsNullOrWhiteSpace(homePath))
-				homePath = Path.Combine(Environment.GetEnvironmentVariable("HOMEDRIVE"), Environment.GetEnvironmentVariable("HOMEPATH"));
-			if (string.IsNullOrWhiteSpace(homePath))
-				throw new DirectoryNotFoundException("Can not find home directory.");
-
-			_fs = new DeviceFileSystem(DeviceFileSystemRoot.UserDefined, homePath);
+			_fs = new DeviceFileSystem(DeviceFileSystemRoot.UserDefined, _homePath);
 
 			Initialized = true;
+
+			Log.I($"Data will be stored in directory: '{Path.Combine(_homePath, _dbDirectory)}'.", this);
 
 			return Task.FromResult(true);
 		}
@@ -52,7 +53,7 @@ namespace pbXStorage.Server
 		{
 			IFileSystem fs = await _fs.CloneAsync();
 
-			await fs.CreateDirectoryAsync(".pbXStorage").ConfigureAwait(false);
+			await fs.CreateDirectoryAsync(_dbDirectory).ConfigureAwait(false);
 
 			if (!string.IsNullOrWhiteSpace(storageId))
 				await fs.CreateDirectoryAsync(storageId).ConfigureAwait(false);
@@ -93,7 +94,8 @@ namespace pbXStorage.Server
 		{
 			await ExecuteInLock(storageId, thingId, async (IFileSystem fs) =>
 			{
-				data = Manager.Cryptographer != null ? Manager.Cryptographer.Encrypt(data) : data;
+				if (Manager != null)
+					data = Manager.Cryptographer != null ? Manager.Cryptographer.Encrypt(data) : data;
 
 				await fs.WriteTextAsync(thingId, data).ConfigureAwait(false);
 				return null;
@@ -144,7 +146,8 @@ namespace pbXStorage.Server
 
 				string data = await fs.ReadTextAsync(thingId).ConfigureAwait(false);
 
-				data = Manager.Cryptographer != null ? Manager.Cryptographer.Decrypt(data) : data;
+				if (Manager != null)
+					data = Manager.Cryptographer != null ? Manager.Cryptographer.Decrypt(data) : data;
 
 				return data;
 			})

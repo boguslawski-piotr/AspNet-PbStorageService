@@ -6,8 +6,12 @@ namespace pbXStorage.Server
 {
 	public interface IDb
 	{
+		// In the class that will implement this interface you can define
+		// <c>public Manager Manager</c>
+		// and then the UseDb(...) extension will set this field to a valid value.
+
 		bool Initialized { get; }
-		Task InitializeAsync(Manager manager);
+		Task InitializeAsync();
 
 		Task StoreThingAsync(string storageId, string thingId, string data);
 		Task<bool> ThingExistsAsync(string storageId, string thingId);

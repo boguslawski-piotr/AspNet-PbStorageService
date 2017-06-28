@@ -1,0 +1,60 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.26430.14
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "pbXNet.Shared", "..\pbX\pbXNet\pbXNet.Shared.shproj", "{0F24CC4F-7A9B-4835-8F00-4DC291773539}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Server.ASP.NETCore", "Server.ASP.NETCore\Server.ASP.NETCore.csproj", "{819DE691-717A-483C-9D0A-7B0FCA637307}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "pbXNet.NETStd", "..\pbX\pbXNet.NETStd\pbXNet.NETStd.csproj", "{9EE7F4CE-535E-4A31-BD49-ED95448764CA}"
+EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Server", "Server\Server.shproj", "{91467C6A-AEAD-44CB-A6DD-76843369C45B}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Test.NETCore", "Test.NETCore\Test.NETCore.csproj", "{FB1EC68D-2E61-4E27-97AE-C5CDC8AD2F23}"
+EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Server.ASP", "Server.ASP\Server.ASP.shproj", "{7BF3806E-FBD2-4F7D-9289-F63F3DFB6FAE}"
+EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Admin", "Admin\Admin.shproj", "{24A45940-1C9C-45BB-9DC5-1FC043EF3451}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Admin.NETcore", "Admin.NETcore\Admin.NETcore.csproj", "{C1006C26-1461-4CA0-95E3-0F1920DEA2B6}"
+EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Client", "Client\Client.shproj", "{DF93DDF6-F395-44CF-8D87-328616E5D772}"
+EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Test", "Test\Test.shproj", "{84272E20-48A7-47ED-80CA-33585E446C48}"
+EndProject
+Global
+	GlobalSection(SharedMSBuildProjectFiles) = preSolution
+		..\pbX\pbXNet\pbXNet.Shared.projitems*{0f24cc4f-7a9b-4835-8f00-4dc291773539}*SharedItemsImports = 13
+		Admin\Admin.projitems*{24a45940-1c9c-45bb-9dc5-1fc043ef3451}*SharedItemsImports = 13
+		Server.ASP\Server.ASP.projitems*{7bf3806e-fbd2-4f7d-9289-f63f3dfb6fae}*SharedItemsImports = 13
+		Test\Test.projitems*{84272e20-48a7-47ed-80ca-33585e446c48}*SharedItemsImports = 13
+		Server\Server.projitems*{91467c6a-aead-44cb-a6dd-76843369c45b}*SharedItemsImports = 13
+		Client\Client.projitems*{df93ddf6-f395-44cf-8d87-328616e5d772}*SharedItemsImports = 13
+	EndGlobalSection
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{819DE691-717A-483C-9D0A-7B0FCA637307}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{819DE691-717A-483C-9D0A-7B0FCA637307}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{819DE691-717A-483C-9D0A-7B0FCA637307}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{819DE691-717A-483C-9D0A-7B0FCA637307}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9EE7F4CE-535E-4A31-BD49-ED95448764CA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9EE7F4CE-535E-4A31-BD49-ED95448764CA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9EE7F4CE-535E-4A31-BD49-ED95448764CA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9EE7F4CE-535E-4A31-BD49-ED95448764CA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FB1EC68D-2E61-4E27-97AE-C5CDC8AD2F23}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FB1EC68D-2E61-4E27-97AE-C5CDC8AD2F23}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FB1EC68D-2E61-4E27-97AE-C5CDC8AD2F23}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FB1EC68D-2E61-4E27-97AE-C5CDC8AD2F23}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C1006C26-1461-4CA0-95E3-0F1920DEA2B6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C1006C26-1461-4CA0-95E3-0F1920DEA2B6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C1006C26-1461-4CA0-95E3-0F1920DEA2B6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C1006C26-1461-4CA0-95E3-0F1920DEA2B6}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

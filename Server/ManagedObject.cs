@@ -2,7 +2,7 @@
 {
 	public class ManagedObject
 	{
-		protected Manager Manager;
+		public Manager Manager;
 
 		public ManagedObject(Manager manager)
 		{

@@ -82,9 +82,10 @@ namespace pbXStorage.Server
 
 			services.AddSingleton(
 				new Manager()
+					.SetId(Configuration.GetValue<string>("pbXStorageId", null))
 					.UseSimpleCryptographer(new SimpleCryptographer2DataProtector(protector))
 					.UseNewtonsoftJSonSerializer()
-					.UseDb<DbOnFileSystem>()
+					.UseDb(new DbOnFileSystem())
 			);
 		}
 
