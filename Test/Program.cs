@@ -9,7 +9,7 @@ namespace Test.NETStd
 {
 	class Program
 	{
-		static Uri ApiUri = new Uri("http://10.211.55.3:50768/api/storage/");
+		static Uri ApiUri = new Uri("http://10.211.55.3:23456/api/storage/");
 
 		// generated in app
 		static IAsymmetricCryptographerKeyPair appKeys;
@@ -33,19 +33,19 @@ namespace Test.NETStd
 
 		static async Task NewClientTestAsync()
 		{
-			string httpcmd = "GET";
-			string cmd = "newclient";
+			//string httpcmd = "GET";
+			//string cmd = "newclient";
 
-			Uri uri = new Uri(ApiUri, cmd);
+			//Uri uri = new Uri(ApiUri, cmd);
 
-			string response = await pbXStorage.Client.Tools.ExecuteCommandAsync(httpcmd, uri);
+			//string response = await pbXStorage.Client.Tools.ExecuteCommandAsync(httpcmd, uri);
 
-			string[] clientData = response.Split(pbXStorage.Client.Tools.commaCharArray, 2);
-			clientId = clientData[0];
-			clientPblKey = new RsaKeyPair(null, clientData[1]);
+			//string[] clientData = response.Split(pbXStorage.Client.Tools.commaCharArray, 2);
+			//clientId = clientData[0];
+			//clientPblKey = new RsaKeyPair(null, clientData[1]);
 
-			//clientId = "74a95bc46f8e41b7922a6c4ce686a94e636340738013649305";
-			//clientPblKey = new RsaKeyPair(null, "FZLHEUQxCEMr+jOY7CPB9F/SskeSLL3x931wAOB8X8wpZ3ivCSXy2jsEpsXsfc0VmrTPv4M6lI/1sCkhG6TaFE7ihBB6scbpw1Xt5apRopJvrC4+nsupAzvijHO6DWWgGkDnEYhGG62iDHHcgzNZyRRUg1zm4XaFrwG8uUOo2JZKTfMsHRSEZA+aV1BKWci31DkXIc6T86DmxVvD691qvb7o7QS9E3ULkdTQGHHbSMysidcHPd3E0K+M4ehKs7wtcvY2ZFdVYk20nU1YN5yfs29ykYR90uwq5eK8QNJFN5dPw8YU2uR+eyGjwXB6pk0kHXq9WikwkjwuDcEO3cuiup7IOK+QALa2c4BYN5EvlSW80/z7oVdFpshLtqzl+Bw65j29t2JF+wN+");
+			clientId = "1bc3f461f9ad4a40ac4f6a366c209484636342939872347169";
+			clientPblKey = new RsaKeyPair(null, "FZBJEkQxCEJP9Ks0JkaXxOH+R2p7xYYHFN/3ERMRf9+LspdJDoTc8gxvexbWUXxXvY7VRIq8eBu1yz0brMlPRbdruuTJwFtHY/EN3Wy3h0eAyMuKeMLEfCcJnykpVlkcxig5JiA1O3c9ZSPL0wcMNk1c5Um5bQGs2jMtCAWbTulyvptrGB1/zDSxjPojco8HTP3sXI5x9VM9UUuQNurRXL7mgR8=");
 
 			Console.WriteLine();
 			Console.WriteLine($"Client: {clientId} with public key: {clientPblKey.Public}");

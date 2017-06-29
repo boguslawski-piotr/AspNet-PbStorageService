@@ -102,13 +102,24 @@ namespace pbXStorage.Server
 			Microsoft.Extensions.Logging.ILogger logger = loggerFactory.CreateLogger("pbXStorage.Server");
 			Log.AddLogger(new ILogger2MicrosoftILogger(logger));
 
+			// Setup error page.
+
+			if (env.IsDevelopment())
+				app.UseDeveloperExceptionPage();
+			else
+				app.UseExceptionHandler("/Home/Error");
+
 			// Use MVC framework.
 
-			app.UseMvc();
+			app.UseMvc(routes =>
+			{
+				routes.MapRoute(
+					name: "default",
+					template: "{controller=Home}/{action=Index}/{id?}");
+			});
 
 			// Initialize pbXStorage.
 
-			//Manager manager = app.ApplicationServices.GetService<Manager>();
 			await manager.InitializeAsync();
 		}
 	}

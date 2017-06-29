@@ -7,10 +7,24 @@
     <Authors>Piotr Boguslawski</Authors>
     <Company />
     <Description>TODO: some description</Description>
+    <PreBuildEvent>xcopy /Y $(SolutionDir)Server.ASP\Views\Home\Index.cshtml $(SolutionDir)Server.ASP.NETCore\Views\Home\</PreBuildEvent>
   </PropertyGroup>
 
   <ItemGroup>
-    <Folder Include="wwwroot\" />
+    <Compile Remove="NewFolder\**" />
+    <Compile Remove="wwwroot\**" />
+    <Content Remove="NewFolder\**" />
+    <Content Remove="wwwroot\**" />
+    <EmbeddedResource Remove="NewFolder\**" />
+    <EmbeddedResource Remove="wwwroot\**" />
+    <None Remove="NewFolder\**" />
+    <None Remove="wwwroot\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Remove=".DS_Store" />
+    <None Remove="Properties\.DS_Store" />
+    <None Remove="Views\.DS_Store" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.ApplicationInsights.AspNetCore" Version="2.0.0" />
@@ -23,7 +37,15 @@
     <DotNetCliToolReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Tools" Version="1.0.1" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="Views\Home\Index.cshtml" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\..\pbX\pbXNet.NETStd\pbXNet.NETStd.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Update="Views\Home\Index.cshtml">
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
   </ItemGroup>
   <Import Project="..\Server\Server.projitems" Label="Shared" />
   <Import Project="..\Server.ASP\Server.ASP.projitems" Label="Shared" />

@@ -13,7 +13,12 @@ namespace pbXStorage.Server
 		public string Id { get; set; }
 
 		/// <summary>
-		/// Public key as readable string ready to store in storage and to send via net.
+		/// Client role. Only Admins can create new clients.
+		/// </summary>
+		public bool IsAdmin { get; set; }
+
+		/// <summary>
+		/// Public key as readable string ready to store in storage, to send via net and to pass to RsaKeyPair constructor.
 		/// </summary>
 		public string PublicKey { get; set; }
 
@@ -33,7 +38,7 @@ namespace pbXStorage.Server
 			: base(manager)
 		{ }
 
-		public static Client New(Manager manager)
+		public static Client New(Manager manager, bool isAdmin = false)
 		{
 			if(manager == null)
 				throw new ArgumentNullException(nameof(manager));
@@ -41,28 +46,30 @@ namespace pbXStorage.Server
 			Client client = new Client(manager);
 
 			client.Id = Tools.CreateGuidEx();
+			client.IsAdmin = isAdmin;
 
 			RsaCryptographer cryptographer = new RsaCryptographer();
 			client._keys = cryptographer.GenerateKeyPair();
 
 			client.PublicKey = client._keys.Public;
 			client.PrivateKey = client._keys.Private;
-			
-			// TODO: encrypt & obfuscate client.PrivateKey
+
+			// TODO: encrypt client.PrivateKey
+
+			client.PrivateKey = Obfuscator.Obfuscate(client.PrivateKey);
 
 			return client;
 		}
 
-		public Task InitializeAfterDeserializeAsync(Manager manager)
+		public void InitializeAfterDeserialize(Manager manager)
 		{
 			Manager = manager ?? throw new ArgumentNullException(nameof(manager));
 
-			// TODO: deobfuscate & decrypt PrivateKey - only for use in RsaKeyPair
-			string privateKey = PrivateKey;
+			string privateKey = Obfuscator.DeObfuscate(PrivateKey);
+
+			// TODO: decrypt privateKey
 
 			_keys = new RsaKeyPair(privateKey, PublicKey);
-
-			return Task.FromResult(true);
 		}
 
 		public string GetIdAndPublicKey()

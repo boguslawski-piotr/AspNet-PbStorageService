@@ -44,17 +44,7 @@ namespace pbXStorage.Server
 {
 	public class Manager
 	{
-		string _id = "f406bd73571d4e11a0221d457b8589cc";
-		public string Id {
-			get => _id;
-			set {
-				if (value != null)
-				{
-					_id = value;
-					Log.I($"Id is set to: {_id}'.", this);
-				}
-			}
-		} 
+		public string Id { get; set; }
 
 		public ISerializer Serializer { get; set; }
 
@@ -70,8 +60,8 @@ namespace pbXStorage.Server
 
 		public async Task InitializeAsync()
 		{
-			if (Serializer == null || Db == null)
-				throw new ArgumentException($"{nameof(Serializer)} and {nameof(Db)} must be valid objects.");
+			if (Id == null || Serializer == null || Db == null)
+				throw new ArgumentException($"{nameof(Id)}, {nameof(Serializer)} and {nameof(Db)} must be valid objects.");
 
 			if (!Db.Initialized)
 				await Db.InitializeAsync();
@@ -81,16 +71,18 @@ namespace pbXStorage.Server
 
 		#region Clients
 
-		const string _clientsThingId = "c235e54b577c44418ab0-948f299e8308";
+		const string _clientsThingId = "c235e54b577c44418ab0948f299e830876b14f2cc39742f3bc4dd5ae581d1e31";
 
 		readonly SemaphoreSlim _clientsLock = new SemaphoreSlim(1);
 
 		public async Task LoadClientsAsync()
 		{
+			bool createAdmin = false;
+
 			await _clientsLock.WaitAsync().ConfigureAwait(false);
 			try
 			{
-				if (await Db.ThingExistsAsync(Id, _clientsThingId))
+				if (await Db.ThingExistsAsync(Id, _clientsThingId).ConfigureAwait(false))
 				{
 					string d = await Db.GetThingCopyAsync(Id, _clientsThingId).ConfigureAwait(false);
 					if (d != null)
@@ -103,9 +95,12 @@ namespace pbXStorage.Server
 						_clients = Serializer.Deserialize<ConcurrentDictionary<string, Client>>(d);
 
 						foreach (var client in _clients.Values)
-							await client.InitializeAfterDeserializeAsync(this).ConfigureAwait(false);
-
+							client.InitializeAfterDeserialize(this);
 					}
+				}
+				else
+				{
+					createAdmin = true;
 				}
 
 				Log.I($"{_clients?.Values.Count} client(s) definition loaded.", this);
@@ -119,6 +114,9 @@ namespace pbXStorage.Server
 			{
 				_clientsLock.Release();
 			}
+
+			if(createAdmin)
+				await NewClientAsync(true);
 		}
 
 		public async Task SaveClientsAsync()
@@ -145,19 +143,17 @@ namespace pbXStorage.Server
 			}
 		}
 
-		public async Task<string> NewClientAsync()
+		public async Task<string> NewClientAsync(bool isAdmin = false)
 		{
 			try
 			{
-				Client client = Client.New(this);
+				Client client = Client.New(this, isAdmin);
 
 				_clients[client.Id] = client;
 
 				await SaveClientsAsync().ConfigureAwait(false);
 
-				string rc = client.GetIdAndPublicKey();
-
-				return OK(rc);
+				return OK(client.GetIdAndPublicKey());
 			}
 			catch (Exception ex)
 			{
@@ -177,7 +173,7 @@ namespace pbXStorage.Server
 			{
 				try
 				{
-					appPublicKey = GET(appPublicKey);
+					appPublicKey = BODY(appPublicKey);
 
 					App app = _apps.Values.ToList().Find((_app) => (_app.PublicKey == appPublicKey && _app.Client == client));
 					if (app == null)
@@ -265,7 +261,7 @@ namespace pbXStorage.Server
 		{
 			return await ExecuteInStorage(storageToken, async (Storage storage) =>
 			{
-				await storage.StoreAsync(thingId, GET(data)).ConfigureAwait(false);
+				await storage.StoreAsync(thingId, BODY(data)).ConfigureAwait(false);
 				return OK();
 			}).ConfigureAwait(false);
 		}
@@ -315,7 +311,7 @@ namespace pbXStorage.Server
 
 		#region Tools
 
-		string GET(string data)
+		string BODY(string data)
 		{
 			return Obfuscator.DeObfuscate(data);
 		}

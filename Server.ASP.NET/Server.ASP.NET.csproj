@@ -13,6 +13,7 @@
     <Company />
     <Product />
     <Description>TODO: some description</Description>
+    <PreBuildEvent>xcopy /Y $(SolutionDir)Server.ASP\Views\Home\Index.cshtml $(SolutionDir)Server.ASP.NET\Views\Home\</PreBuildEvent>
     <ApplicationIcon />
     <OutputTypeEx>exe</OutputTypeEx>
     <StartupObject />
