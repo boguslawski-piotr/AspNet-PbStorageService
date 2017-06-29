@@ -9,8 +9,6 @@
     <ProjectReference Include="..\..\pbX\pbXNet.NETStd\pbXNet.NETStd.csproj" />
   </ItemGroup>
 
-  <Import Project="..\Client\Client.projitems" Label="Shared" />
-
   <Import Project="..\Test\Test.projitems" Label="Shared" />
 
 </Project>

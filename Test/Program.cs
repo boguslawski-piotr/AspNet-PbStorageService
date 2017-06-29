@@ -44,8 +44,8 @@ namespace Test.NETStd
 			//clientId = clientData[0];
 			//clientPblKey = new RsaKeyPair(null, clientData[1]);
 
-			clientId = "1bc3f461f9ad4a40ac4f6a366c209484636342939872347169";
-			clientPblKey = new RsaKeyPair(null, "FZBJEkQxCEJP9Ks0JkaXxOH+R2p7xYYHFN/3ERMRf9+LspdJDoTc8gxvexbWUXxXvY7VRIq8eBu1yz0brMlPRbdruuTJwFtHY/EN3Wy3h0eAyMuKeMLEfCcJnykpVlkcxig5JiA1O3c9ZSPL0wcMNk1c5Um5bQGs2jMtCAWbTulyvptrGB1/zDSxjPojco8HTP3sXI5x9VM9UUuQNurRXL7mgR8=");
+			clientId = "ebcb9605befa4566a16968f34f410098636343336003349754";
+			clientPblKey = new RsaKeyPair(null, "HY7HDQQxDMQqMqAcnpIt9V/SLe7LIYg55wACAJ5zEzzEWoGxRW0JtVPX0A2imORKz0NHh4udiP5SQ1Afk8/zj1TLyMza3SpOVnViBbUGsILufLjk0LbCtBEpcf/JJvjY9VydLJiFZWkklnqN6UGjtQRQHhFzK2qXa32qmr5zsuv9bD6T277ZzXxN9FMREjDDpYFeywU2YntVojUObo/znfMD");
 
 			Console.WriteLine();
 			Console.WriteLine($"Client: {clientId} with public key: {clientPblKey.Public}");
