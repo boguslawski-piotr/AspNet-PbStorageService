@@ -13,47 +13,30 @@ namespace pbXStorage.Server
 	{
 		public bool Initialized { get; private set; }
 
-		string _homePath;
-
-		const string _dbDirectory = ".pbXStorage";
+		string _directory;
 
 		IFileSystem _fs;
 
 		ConcurrentDictionary<string, SemaphoreSlim> _locks = new ConcurrentDictionary<string, SemaphoreSlim>();
 
-		public DbOnFileSystem(Manager manager = null, string homePath = null)
+		public DbOnFileSystem(string directory = null, Manager manager = null)
 			: base(manager)
 		{
-			_homePath = homePath;
+			_directory = directory;
 		}
 
-		public Task InitializeAsync()
+		public async Task InitializeAsync()
 		{
-			if (_homePath == null)
-			{
-				_homePath = Environment.GetEnvironmentVariable("HOME");
-				if (string.IsNullOrWhiteSpace(_homePath))
-					_homePath = Environment.GetEnvironmentVariable("USERPROFILE");
-				if (string.IsNullOrWhiteSpace(_homePath))
-					_homePath = Path.Combine(Environment.GetEnvironmentVariable("HOMEDRIVE"), Environment.GetEnvironmentVariable("HOMEPATH"));
-				if (string.IsNullOrWhiteSpace(_homePath))
-					throw new DirectoryNotFoundException("Can not find home directory.");
-			}
-
-			_fs = new DeviceFileSystem(DeviceFileSystemRoot.UserDefined, _homePath);
+			_fs = new DeviceFileSystem(DeviceFileSystemRoot.UserDefined, _directory ?? "~");
 
 			Initialized = true;
 
-			Log.I($"Data will be stored in directory: '{Path.Combine(_homePath, _dbDirectory)}'.", this);
-
-			return Task.FromResult(true);
+			Log.I($"Data will be stored in directory: '{_directory}'.", this);
 		}
 
 		async Task<IFileSystem> GetFs(string storageId)
 		{
 			IFileSystem fs = await _fs.CloneAsync();
-
-			await fs.CreateDirectoryAsync(_dbDirectory).ConfigureAwait(false);
 
 			if (!string.IsNullOrWhiteSpace(storageId))
 				await fs.CreateDirectoryAsync(storageId).ConfigureAwait(false);
