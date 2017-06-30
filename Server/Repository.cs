@@ -5,17 +5,12 @@ using pbXNet;
 namespace pbXStorage.Server
 {
 	[System.Serializable]
-	public class Client : ManagedObject
+	public class Repository : ManagedObject
 	{
 		/// <summary>
-		/// Client identifier.
+		/// Repository identifier.
 		/// </summary>
 		public string Id { get; set; }
-
-		/// <summary>
-		/// Client role. Only Admins can create new clients.
-		/// </summary>
-		public bool IsAdmin { get; set; }
 
 		/// <summary>
 		/// Public key as readable string ready to store in storage, to send via net and to pass to RsaKeyPair constructor.
@@ -30,35 +25,34 @@ namespace pbXStorage.Server
 		// Real key pair used to encrypt/decrypt/sign/verify data.
 		IAsymmetricCryptographerKeyPair _keys;
 
-		public Client()
+		public Repository()
 			: base(null)
 		{ }
 
-		public Client(Manager manager)
+		public Repository(Manager manager)
 			: base(manager)
 		{ }
 
-		public static Client New(Manager manager, bool isAdmin = false)
+		public static Repository New(Manager manager)
 		{
 			if(manager == null)
 				throw new ArgumentNullException(nameof(manager));
 
-			Client client = new Client(manager);
+			Repository repository = new Repository(manager);
 
-			client.Id = Tools.CreateGuidEx();
-			client.IsAdmin = isAdmin;
+			repository.Id = Tools.CreateGuidEx();
 
 			RsaCryptographer cryptographer = new RsaCryptographer();
-			client._keys = cryptographer.GenerateKeyPair();
+			repository._keys = cryptographer.GenerateKeyPair();
 
-			client.PublicKey = client._keys.Public;
-			client.PrivateKey = client._keys.Private;
+			repository.PublicKey = repository._keys.Public;
+			repository.PrivateKey = repository._keys.Private;
 
-			// TODO: encrypt client.PrivateKey
+			// TODO: encrypt repository.PrivateKey
 
-			client.PrivateKey = Obfuscator.Obfuscate(client.PrivateKey);
+			repository.PrivateKey = Obfuscator.Obfuscate(repository.PrivateKey);
 
-			return client;
+			return repository;
 		}
 
 		public void InitializeAfterDeserialize(Manager manager)
@@ -70,11 +64,6 @@ namespace pbXStorage.Server
 			// TODO: decrypt privateKey
 
 			_keys = new RsaKeyPair(privateKey, PublicKey);
-		}
-
-		public string GetIdAndPublicKey()
-		{
-			return $"{Id},{PublicKey}";
 		}
 
 		public string Sign(string data)

@@ -36,13 +36,13 @@ namespace pbXStorage.Server
 				string tokenAndPublicKey = $"{Token},{_keys.Public}";
 
 				tokenAndPublicKey = App.Encrypt(tokenAndPublicKey);
-				string signature = App.Client.Sign(tokenAndPublicKey);
+				string signature = App.Repository.Sign(tokenAndPublicKey);
 
 				return $"{signature},{tokenAndPublicKey}";
 			}
 		}
 
-		public string IdForDb => Path.Combine(App.Client.Id, Id);
+		public string IdForDb => Path.Combine(App.Repository.Id, Id);
 
 		public string Sign(string data)
 		{

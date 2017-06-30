@@ -4,25 +4,11 @@ using pbXNet;
 
 namespace pbXStorage.Server
 {
-	public static class ManagerExtensionsEx
-	{
-		public static Manager UseNewtonsoftJSonSerializer(this Manager manager) => ManagerExtensions.UseSerializer<NewtonsoftJsonSerializer>(manager);
-	}
-
 	public static class ManagerExtensions
 	{
 		public static Manager SetId(this Manager manager, string id)
 		{
 			manager.Id = id;
-			return manager;
-		}
-
-		public static Manager UseSerializer<T>(this Manager manager) where T : ISerializer, new() => UseSerializer(manager, new T());
-
-		public static Manager UseSerializer(this Manager manager, ISerializer serializer)
-		{
-			TrySetManagerProperty(serializer, manager);
-			manager.Serializer = serializer;
 			return manager;
 		}
 

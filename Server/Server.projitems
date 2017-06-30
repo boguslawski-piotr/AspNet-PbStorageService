@@ -10,7 +10,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="$(MSBuildThisFileDirectory)App.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Client.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Repository.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)DbOnFileSystem.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)IDb.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ManagedObject.cs" />

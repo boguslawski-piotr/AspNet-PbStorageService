@@ -6,27 +6,26 @@ using System.Threading;
 using System.Threading.Tasks;
 using pbXNet;
 
-// register (special util, web page, etc.) -> clientId, clientPublicKey
+// register (web page, etc.) -> repositoryId, repositoryPublicKey
 // app has:
-//   clientId
-//   clientPublicKey
+//   repositoryId
+//   repositoryPublicKey
 // server has:
-//   clientId
-//   clientPublicKey
-//   clientPrivateKey
+//   repositoryId
+//   repositoryPublicKey
+//   repositoryPrivateKey
 
-// app run
-// generate:
+// app run & generate:
 //   appPrivateKey
 //   appPublicKey
 
-// registerapp (post clientId) <- (appPublicKey) encrypted with clientPublicKey -> (appToken)
+// registerapp (post repositoryId) <- (appPublicKey) encrypted with repositoryPublicKey -> (appToken)
 // app has:
 //   appToken
 // server has
 //   appPublicKey
 
-// open (get appToken, storageId) <- nothing -> (storageToken, storagePublicKey) encrypted with appPublicKey, and signed with clientPrivateKey
+// open (get appToken, storageId) <- nothing -> (storageToken, storagePublicKey) encrypted with appPublicKey, and signed with repositoryPrivateKey
 // app has:
 //   storageToken
 //   storagePublicKey
@@ -46,45 +45,43 @@ namespace pbXStorage.Server
 	{
 		public string Id { get; set; }
 
-		public ISerializer Serializer { get; set; }
+		public IDb Db { get; set; }
 
 		public ISimpleCryptographer Cryptographer { get; set; }
 
-		public IDb Db { get; set; }
-
-		ConcurrentDictionary<string, Client> _clients = new ConcurrentDictionary<string, Client>();
+		ConcurrentDictionary<string, Repository> _repositories = new ConcurrentDictionary<string, Repository>();
 
 		ConcurrentDictionary<string, App> _apps = new ConcurrentDictionary<string, App>();
 
 		ConcurrentDictionary<string, Storage> _storages = new ConcurrentDictionary<string, Storage>();
 
+		ISerializer _serializer { get; set; } = new NewtonsoftJsonSerializer();
+
 		public async Task InitializeAsync()
 		{
-			if (Id == null || Serializer == null || Db == null)
-				throw new ArgumentException($"{nameof(Id)}, {nameof(Serializer)} and {nameof(Db)} must be valid objects.");
+			if (Id == null || Db == null)
+				throw new ArgumentException($"{nameof(Id)} and {nameof(Db)} must be valid objects.");
 
 			if (!Db.Initialized)
 				await Db.InitializeAsync();
 
-			await LoadClientsAsync();
+			await LoadRepositoriesAsync();
 		}
 
-		#region Clients
+		#region Repositories
 
-		const string _clientsThingId = "c235e54b577c44418ab0948f299e830876b14f2cc39742f3bc4dd5ae581d1e31";
+		const string _repositoriesThingId = "c235e54b577c44418ab0948f299e830876b14f2cc39742f3bc4dd5ae581d1e31";
 
-		readonly SemaphoreSlim _clientsLock = new SemaphoreSlim(1);
+		readonly SemaphoreSlim _repositoriesLock = new SemaphoreSlim(1);
 
-		public async Task LoadClientsAsync()
+		public async Task LoadRepositoriesAsync()
 		{
-			bool createAdmin = false;
-
-			await _clientsLock.WaitAsync().ConfigureAwait(false);
+			await _repositoriesLock.WaitAsync().ConfigureAwait(false);
 			try
 			{
-				if (await Db.ThingExistsAsync(Id, _clientsThingId).ConfigureAwait(false))
+				if (await Db.ThingExistsAsync(Id, _repositoriesThingId).ConfigureAwait(false))
 				{
-					string d = await Db.GetThingCopyAsync(Id, _clientsThingId).ConfigureAwait(false);
+					string d = await Db.GetThingCopyAsync(Id, _repositoriesThingId).ConfigureAwait(false);
 					if (d != null)
 					{
 						if (Cryptographer != null)
@@ -92,18 +89,14 @@ namespace pbXStorage.Server
 
 						d = Obfuscator.DeObfuscate(d);
 
-						_clients = Serializer.Deserialize<ConcurrentDictionary<string, Client>>(d);
+						_repositories = _serializer.Deserialize<ConcurrentDictionary<string, Repository>>(d);
 
-						foreach (var client in _clients.Values)
-							client.InitializeAfterDeserialize(this);
+						foreach (var repository in _repositories.Values)
+							repository.InitializeAfterDeserialize(this);
 					}
 				}
-				else
-				{
-					createAdmin = true;
-				}
 
-				Log.I($"{_clients?.Values.Count} client(s) definition loaded.", this);
+				Log.I($"{_repositories?.Values.Count} repositories loaded.", this);
 			}
 			catch (Exception ex)
 			{
@@ -112,76 +105,107 @@ namespace pbXStorage.Server
 			}
 			finally
 			{
-				_clientsLock.Release();
+				_repositoriesLock.Release();
 			}
-
-			if(createAdmin)
-				await NewClientAsync(true);
 		}
 
-		public async Task SaveClientsAsync()
+		public async Task SaveRepositoriesAsync()
 		{
-			await _clientsLock.WaitAsync().ConfigureAwait(false);
+			await _repositoriesLock.WaitAsync().ConfigureAwait(false);
 			try
 			{
-				string d = Serializer.Serialize(_clients);
+				string d = _serializer.Serialize(_repositories);
 
 				d = Obfuscator.Obfuscate(d);
 
 				if (Cryptographer != null)
 					d = Cryptographer.Encrypt(d);
 
-				await Db.StoreThingAsync(Id, _clientsThingId, d).ConfigureAwait(false);
+				await Db.StoreThingAsync(Id, _repositoriesThingId, d).ConfigureAwait(false);
 			}
 			catch (Exception ex)
 			{
 				Log.E(ex.Message, this);
+				// no rethrow!
 			}
 			finally
 			{
-				_clientsLock.Release();
+				_repositoriesLock.Release();
 			}
 		}
 
-		public async Task<string> NewClientAsync(bool isAdmin = false)
+		public async Task<Repository> NewRepositoryAsync()
 		{
 			try
 			{
-				Client client = Client.New(this, isAdmin);
+				Repository repository = Repository.New(this);
 
-				_clients[client.Id] = client;
+				_repositories[repository.Id] = repository;
 
-				await SaveClientsAsync().ConfigureAwait(false);
+				await SaveRepositoriesAsync().ConfigureAwait(false);
 
-				return OK(client.GetIdAndPublicKey());
+				Log.I($"created new repository '{repository.Id}'.", this);
+
+				return repository;
 			}
 			catch (Exception ex)
 			{
 				Log.E(ex.Message, this);
+				throw ex;
 			}
+		}
 
-			return Error("Failed to create client.");
+		public async Task<Repository> GetRepositoryAsync(string repositoryId)
+		{
+			try
+			{
+				return _repositories[repositoryId];
+			}
+			catch (Exception ex)
+			{
+				Log.E(ex.Message, this);
+				throw ex;
+			}
+		}
+
+		public async Task RemoveRepositoryAsync(string repositoryId)
+		{
+			try
+			{
+				// TODO: remove all data...
+
+				_repositories.TryRemove(repositoryId, out Repository r);
+
+				await SaveRepositoriesAsync().ConfigureAwait(false);
+
+				Log.I($"removed repository '{repositoryId}'.", this);
+			}
+			catch (Exception ex)
+			{
+				Log.E(ex.Message, this);
+				throw ex;
+			}
 		}
 
 		#endregion
 
 		#region Apps
 
-		public async Task<string> RegisterAppAsync(string clientId, string appPublicKey)
+		public async Task<string> RegisterAppAsync(string repositoryId, string appPublicKey)
 		{
-			if (_clients.TryGetValue(clientId, out Client client))
+			if (_repositories.TryGetValue(repositoryId, out Repository repository))
 			{
 				try
 				{
 					appPublicKey = BODY(appPublicKey);
 
-					App app = _apps.Values.ToList().Find((_app) => (_app.PublicKey == appPublicKey && _app.Client == client));
+					App app = _apps.Values.ToList().Find((_app) => (_app.PublicKey == appPublicKey && _app.Repository == repository));
 					if (app == null)
 					{
-						app = new App(this, client, appPublicKey);
+						app = new App(this, repository, appPublicKey);
 						_apps[app.Token] = app;
 
-						Log.I($"created new app '{app.Token}' for '{client.Id}'.", this);
+						Log.I($"created new app '{app.Token}' for '{repository.Id}'.", this);
 					}
 
 					if (app != null)
@@ -189,13 +213,13 @@ namespace pbXStorage.Server
 				}
 				catch (Exception ex)
 				{
-					return Error(ex.Message);
+					return Error($"1002,{ex.Message}");
 				}
 
-				return Error("Failed to register application.");
+				return Error("1001,Failed to register application.");
 			}
 
-			return Error($"Client '{clientId}' doesn't exist.");
+			return Error($"1000,Repository doesn't exist.");
 		}
 
 		#endregion
@@ -226,13 +250,13 @@ namespace pbXStorage.Server
 				}
 				catch (Exception ex)
 				{
-					return Error(ex.Message);
+					return Error($"2002,{ex.Message}");
 				}
 
-				return Error("Failed to create/open storage.");
+				return Error("2001,Failed to create/open storage.");
 			}
 
-			return Error($"Incorrect application token '{appToken}'.");
+			return Error($"2000,Incorrect application token.");
 		}
 
 		#endregion
@@ -250,11 +274,11 @@ namespace pbXStorage.Server
 				}
 				catch (Exception ex)
 				{
-					return Error(ex.Message, callerName);
+					return Error($"3001,{ex.Message}", callerName);
 				}
 			}
 
-			return Error($"Incorrect storage token '{storageToken}'.", callerName);
+			return Error($"3000,Incorrect storage token.", callerName);
 		}
 
 		public async Task<string> StoreThingAsync(string storageToken, string thingId, string data)

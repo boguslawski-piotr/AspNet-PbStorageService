@@ -261,3 +261,7 @@ __pycache__/
 *.pyc
 ASP.NET Core MVC Server/ala
 .DS_Store
+
+# Others
+.pbXStorage*
+

@@ -5,27 +5,27 @@ namespace pbXStorage.Server
 {
 	public class App : ManagedObject
 	{
-		public Client Client { get; }
+		public Repository Repository { get; }
 
 		public string Token { get; }
 
 		/// <summary>
-		/// Encrypted (with Client.PublicKey) app public key sent via net from app to server.
+		/// Encrypted (with Repository.PublicKey) app public key sent via net from app to server.
 		/// </summary>
 		public string PublicKey { get; }
 
 		// Decrypted app public key used to encrypt data which will be send to app from server.
 		IAsymmetricCryptographerKeyPair _publicKey;
 
-		public App(Manager manager, Client client, string publicKey)
+		public App(Manager manager, Repository repository, string publicKey)
 			: base(manager)
 		{
-			Client = client ?? throw new ArgumentNullException(nameof(client));
+			Repository = repository ?? throw new ArgumentNullException(nameof(repository));
 			PublicKey = publicKey ?? throw new ArgumentNullException(nameof(publicKey));
 
 			Token = Tools.CreateGuidEx();
 
-			publicKey = Client.Decrypt(PublicKey);
+			publicKey = Repository.Decrypt(PublicKey);
 			_publicKey = new RsaKeyPair(null, publicKey);
 		}
 
