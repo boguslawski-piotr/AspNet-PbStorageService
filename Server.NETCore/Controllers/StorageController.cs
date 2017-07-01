@@ -1,17 +1,22 @@
 ﻿using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using pbXStorage.Server.NETCore.Data;
 
 namespace pbXStorage.Server.NETCore.Controllers
 {
 	[Route("api/[controller]")]
     public class StorageController : Controller
     {
-		Manager _manager;
+		readonly Manager _manager;
+		readonly ApplicationDbContext _dbContext;
+		readonly IDb _db;
 
-		public StorageController(Manager manager)
+		public StorageController(Manager manager, ApplicationDbContext dbContext)
 		{
 			_manager = manager;
+			_dbContext = dbContext;
+			_db = new DbOnEF(_dbContext.Things, _dbContext);
 		}
 
 		[HttpPost("registerapp/{repositoryId}")]

@@ -1,0 +1,45 @@
+
+@{ ViewData["Title"] = "Repository"; }
+
+@using pbXStorage.Server;
+
+@inject SignInManager<ApplicationUser> SignInManager
+@inject UserManager<ApplicationUser> UserManager
+@inject ApplicationDbContext DbContext
+@inject pbXStorage.Server.Manager Manager
+
+@{
+	Repository repository = (Repository)ViewData["repository"];
+
+	var ids = await Manager.Db.FindIdsAsync(repository.Id, "");
+	//var ids = _ids.ToList();
+	//ids.Sort((a, b) => string.CompareOrdinal(a.StorageId, b.StorageId));
+}
+
+<h2>@ViewData["Title"].</h2>
+<h4>@repository.Name</h4>
+<hr style="font-size: 60%; margin: 10px 0 10px 0" />
+
+@{
+	foreach (var sid in ids.Where((_id) => _id.Type == IdInDbType.Storage))
+	{
+		<h5>@sid.Id</h5>
+		<ul>
+			@foreach (var tid in ids.Where((_id) => _id.StorageId.EndsWith(sid.Id) && _id.Type == IdInDbType.Thing))
+			{
+				<li>@tid.Id</li>
+			}
+		</ul>
+	}
+
+	foreach (var tid in ids.Where((_id) => _id.StorageId == repository.Id && _id.Type == IdInDbType.Thing))
+	{
+		<h6>@tid.Id</h6>
+	}
+}
+
+<hr />
+
+<form asp-controller="Home" asp-action="Repositories" method="post" class="form-inline">
+	<input type="submit" class="btn btn-primary" value="Go back" title="" /></p>
+</form>

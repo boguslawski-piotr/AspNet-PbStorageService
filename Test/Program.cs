@@ -9,15 +9,12 @@ namespace Test.NETStd
 {
 	class Program
 	{
-		static
-		PbXStorageSettings pbXStorageSettings = new PbXStorageSettings()
+		static PbXStorageSettings pbXStorageSettings = new PbXStorageSettings()
 		{
 			ApiUri = new Uri("http://10.211.55.3:23456/api/storage/"),
 			AppKeys = new RsaCryptographer().GenerateKeyPair(),
-			RepositoryId = "125ccb1ecc4d4e0b9c28eb8752af913d636343736927807099",
-			RepositoryPublicKey = new RsaKeyPair(
-			null,
-			"DY/JDQAxCMQqijSQQOAZrv5L2i3AtrzWAgGgtZ6lDFQQamhRTpJj93WCt0Q+B4m0mbry9DgwSBeoZunZeeruQ25wxdbxqz1W0V0/+6JPPfWnzZlx5Qnkj4AiHr/+wzv2Oe4sFgwoX4ibdPgNty2UNIyaSL3ZIsMeRtlRGO5t22Ou/5piSr4m1WeoBTd2uXk5G1dXEBFbkGOSDyn9d14ta30="),
+			RepositoryId = "73f4dd7157db446abbd83a8230016e73636344710101423971",
+			RepositoryPublicKey = new RsaKeyPair(null, "DZDJDQAxDAIrWsnx7aePuP+SNjxhBBLf98EBgPN9awbe0USZJoUhkniSAUjgoteTHaHS61lG+NjeIZD1ycFHv4i2BXlfyGmTN+1s22jTDhLrCcgmNWuu0xnqlfKKrG7pm6kDOxv6/JidVAVbZwqElArFMahTuDd4qRWvTj/L+frUuGCxDxbFCA9zPpZj10Kl/fDdBj/orbpZ7paHm4bmPfAD"),
 		};
 
 		// given from server during communication
@@ -253,14 +250,22 @@ namespace Test.NETStd
 
 			await OpenStorageTestAsync(appToken, "test2");
 
+			//List<Task> l = new List<Task>();
+			for (int i = 0; i < 1000; i++)
+			{
+				//l.Add(StoreThingTestAsync(storageToken, "test thing " + i.ToString(), "jakies dane....", (DateTime.Now - TimeSpan.FromHours(3))));
+				await StoreThingTestAsync(storageToken, "test thing " + i.ToString(), "jakies dane....", (DateTime.Now - TimeSpan.FromHours(3)));
+			}
+			//await Task.WhenAll(l);
+
 			await OpenStorageTestAsync(appToken, "test");
 
 			await StoreThingTestAsync(storageToken, "test thing", "ala ma kota i psa ąęłóżść", (DateTime.Now - TimeSpan.FromHours(3)));
 
-			//for (int i = 0; i < 1000; i++)
-			//{
-			//	await StoreThingTestAsync(storageToken, "test thing " + i.ToString(), "ala ma kota i psa ąęłóżść", (DateTime.Now - TimeSpan.FromHours(3)));
-			//}
+			for (int i = 0; i < 15; i++)
+			{
+				await StoreThingTestAsync(storageToken, "test thing " + i.ToString(), "ala ma kota i psa ąęłóżść", (DateTime.Now - TimeSpan.FromHours(3)));
+			}
 
 			await ThingExistsTestAsync(storageToken, "test thing");
 
@@ -298,7 +303,7 @@ namespace Test.NETStd
 
 				await TestsAsync();
 
-				//await StressTestsAsync();
+				await StressTestsAsync();
 			}
 			catch (StorageOnPbXStorageException ex)
 			{

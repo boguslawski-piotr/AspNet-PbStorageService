@@ -264,4 +264,5 @@ ASP.NET Core MVC Server/ala
 
 # Others
 .pbXStorage*
+**/*pbXStorage*/*
 

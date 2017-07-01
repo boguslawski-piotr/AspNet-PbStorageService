@@ -1,0 +1,71 @@
+﻿@{ViewData["Title"] = "Repositories"; }
+
+@*@using Microsoft.AspNetCore.Identity
+	@using pbXStorage.Server.NETCore.Data*@
+
+@*@inject SignInManager<ApplicationUser> SignInManager
+	@inject UserManager<ApplicationUser> UserManager
+	@inject ApplicationDbContext DbContext
+	@inject pbXStorage.Server.Manager Manager*@
+
+@{
+	<h2>@ViewData["Title"].</h2>
+	<p>&nbsp;</p>
+
+	foreach (var repository in (List<pbXStorage.Server.Repository>)ViewData["repositories"])
+	{
+		<hr style="font-size: 60%; margin: 10px 0 10px 0" />
+
+		string repositoryWithIDPK = repository.Id;
+		string showBtnTitle = "More...";
+
+		<div class="row">
+			<div class="col-md-9">
+				<h4>@repository.Name</h4>
+
+				@if (ViewData["repositoryWithIDPK"] != null && (string)ViewData["repositoryWithIDPK"] == repository.Id)
+				{
+					repositoryWithIDPK = null;
+					showBtnTitle = "Less...";
+
+					<h6>Identifier:</h6>
+					<p style="font-size: 80%">
+						@repository.Id
+					</p>
+
+					<h6>Public key:</h6>
+					<p style="font-size: 60%">
+						@repository.PublicKey
+					</p>
+				}
+			</div>
+
+			<div class="col-md-1 center-block">
+				<form asp-controller="Home" asp-action="Repositories" method="post" class="form-inline">
+					<input value="@repositoryWithIDPK" name="repositoryId" type="hidden" />
+					<input type="submit" class="btn btn-link" value="@showBtnTitle" title="Show repository id, public key and some auxiliary code" />
+				</form>
+			</div>
+
+			<div class="col-md-1 center-block">
+				<form asp-controller="Home" asp-action="Repository" method="post" class="form-inline">
+					<input value="@repository.Id" name="repositoryId" type="hidden" />
+					<input type="submit" class="btn btn-info" value="Content" title="View repository content" />
+				</form>
+			</div>
+
+			<div class="col-md-1 center-block">
+				<form asp-controller="Home" asp-action="RemoveRepository" method="post" class="form-inline">
+					<input value="@repository.Id" name="repositoryId" type="hidden" />
+					<input type="submit" class="btn btn-danger" value="Delete" title="Delete repository" />
+				</form>
+			</div>
+		</div>
+	}
+
+	<hr />
+
+	<form asp-controller="Home" asp-action="NewRepository" method="post" class="form-inline">
+		<p>New repository name&nbsp;<input type="text" name="name" class="form-control" style="width: 500px" />&nbsp;<input type="submit" class="btn btn-primary" value="Create..." title="" /></p>
+	</form>
+}

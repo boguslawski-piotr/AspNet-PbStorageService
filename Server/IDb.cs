@@ -4,22 +4,41 @@ using System.Threading.Tasks;
 
 namespace pbXStorage.Server
 {
+	public enum IdInDbType
+	{
+		Storage,
+		Thing,
+	}
+
+	public struct IdInDb
+	{
+		// always as: repositoryId[/StorageId]
+		public string StorageId;
+
+		public IdInDbType Type;
+		public string Id;
+	}
+
 	public interface IDb
 	{
-		// In the class that will implement this interface you can define
-		// <c>public Manager Manager</c>
-		// and then the UseDb(...) extension will set this field to a valid value.
-
 		bool Initialized { get; }
 		Task InitializeAsync();
 
-		Task StoreThingAsync(string storageId, string thingId, string data);
+		// storageId is always in the following format:
+		// repositoryId/storageId
+
+		Task StoreThingAsync(string storageId, string thingId, string data, DateTime modifiedOn);
 		Task<bool> ThingExistsAsync(string storageId, string thingId);
 		Task<DateTime> GetThingModifiedOnAsync(string storageId, string thingId);
-		Task SetThingModifiedOnAsync(string storageId, string thingId, DateTime modifiedOn);
 		Task<string> GetThingCopyAsync(string storageId, string thingId);
 		Task DiscardThingAsync(string storageId, string thingId);
+		Task<IEnumerable<IdInDb>> FindThingIdsAsync(string storageId, string pattern);
 
-		Task<IEnumerable<string>> FindThingIdsAsync(string storageId, string pattern);
+		// storageId can be in the following formats:
+		// repositoryId/storageId
+		// repositoryId
+
+		Task DiscardAllAsync(string storageId);
+		Task<IEnumerable<IdInDb>> FindIdsAsync(string storageId, string pattern);
 	};
 }

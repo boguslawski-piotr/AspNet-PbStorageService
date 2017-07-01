@@ -121,7 +121,7 @@ namespace pbXStorage.Server
 				if (Cryptographer != null)
 					d = Cryptographer.Encrypt(d);
 
-				await Db.StoreThingAsync(Id, _repositoriesThingId, d).ConfigureAwait(false);
+				await Db.StoreThingAsync(Id, _repositoriesThingId, d, DateTime.UtcNow).ConfigureAwait(false);
 			}
 			catch (Exception ex)
 			{
@@ -134,11 +134,11 @@ namespace pbXStorage.Server
 			}
 		}
 
-		public async Task<Repository> NewRepositoryAsync()
+		public async Task<Repository> NewRepositoryAsync(string name)
 		{
 			try
 			{
-				Repository repository = Repository.New(this);
+				Repository repository = Repository.New(this, name);
 
 				_repositories[repository.Id] = repository;
 
@@ -172,7 +172,7 @@ namespace pbXStorage.Server
 		{
 			try
 			{
-				// TODO: remove all data...
+				await Db.DiscardAllAsync(repositoryId);
 
 				_repositories.TryRemove(repositoryId, out Repository r);
 

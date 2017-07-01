@@ -42,7 +42,7 @@ namespace pbXStorage.Server
 			}
 		}
 
-		public string IdForDb => Path.Combine(App.Repository.Id, Id);
+		public string IdForDb => Path.Combine(App.Repository.Id, Id).Replace(Path.DirectorySeparatorChar, '/');
 
 		public string Sign(string data)
 		{
@@ -74,8 +74,7 @@ namespace pbXStorage.Server
 			DateTime modifiedOn = DateTime.FromBinary(long.Parse(modifiedOnAndData[0]));
 			data = modifiedOnAndData[1];
 
-			await Manager.Db.StoreThingAsync(IdForDb, thingId, data).ConfigureAwait(false);
-			await Manager.Db.SetThingModifiedOnAsync(IdForDb, thingId, modifiedOn.ToUniversalTime()).ConfigureAwait(false);
+			await Manager.Db.StoreThingAsync(IdForDb, thingId, data, modifiedOn.ToUniversalTime()).ConfigureAwait(false);
 		}
 
 		public async Task<string> ExistsAsync(string thingId)
@@ -113,16 +112,19 @@ namespace pbXStorage.Server
 			if (string.IsNullOrWhiteSpace(pattern))
 				pattern = "";
 
-			IEnumerable<string> ids = await Manager.Db.FindThingIdsAsync(IdForDb, pattern).ConfigureAwait(false);
+			IEnumerable<IdInDb> ids = await Manager.Db.FindThingIdsAsync(IdForDb, pattern).ConfigureAwait(false);
 
 			StringBuilder sids = null;
 			foreach (var id in ids)
 			{
-				if (sids == null)
-					sids = new StringBuilder();
-				else
-					sids.Append('|');
-				sids.Append(id);
+				if (id.Type == IdInDbType.Thing)
+				{
+					if (sids == null)
+						sids = new StringBuilder();
+					else
+						sids.Append('|');
+					sids.Append(id.Id);
+				}
 			}
 
 			string data = sids?.ToString();

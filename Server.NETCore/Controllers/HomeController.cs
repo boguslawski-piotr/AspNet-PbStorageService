@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using pbXNet;
 using pbXStorage.Server.NETCore.Data;
 
 namespace pbXStorage.Server.NETCore.Controllers
@@ -27,33 +28,61 @@ namespace pbXStorage.Server.NETCore.Controllers
 			_signInManager = signInManager;
 		}
 
-		public IActionResult Index()
-        {
-            return View();
-        }
-
-		public IActionResult IndexWithSourceCode(string repositoryId)
-		{
-			ViewData["SourceCode"] = repositoryId;
-			return View("Index");
-		}
-
 		async Task<ApplicationUser> GetUserAsync()
 		{
-			ApplicationUser _user = await _userManager.GetUserAsync(User);
+			if (!_signInManager.IsSignedIn(User))
+				return null;
 
-			if (_user == null || !_signInManager.IsSignedIn(User))
-				throw new Exception("Unauthorized access.");
-
-			return _user;
+			ApplicationUser user = await _userManager.GetUserAsync(User);
+			return user;
 		}
 
-		public async Task<IActionResult> NewRepository()
+		async Task<ApplicationUser> CheckAndGetUserAsync()
 		{
-			this.Request.Host.ToString();
 			ApplicationUser user = await GetUserAsync();
+			if (user == null)
+				throw new Exception("Unauthorized access.");
+			return user;
+		}
 
-			Repository repository = await _manager.NewRepositoryAsync();
+		public async Task<IActionResult> Index()
+        {
+			if(await GetUserAsync() != null)
+				return RedirectToAction(nameof(HomeController.Repositories));
+
+			return View();
+        }
+
+		public async Task<IActionResult> Repositories(string repositoryId)
+		{
+			ApplicationUser user = await CheckAndGetUserAsync();
+
+			await _dbContext.Entry(user)
+				.Collection(nameof(ApplicationUser.Repositories))
+				.LoadAsync();
+
+			IList<Repository> repositories = new List<Repository>();
+
+			foreach (var r in user.Repositories)
+			{
+				try
+				{
+					repositories.Add(await _manager.GetRepositoryAsync(r.RepositoryId));
+				}
+				catch (Exception) { }
+			}
+
+			ViewData["repositories"] = repositories;
+			ViewData["repositoryWithIDPK"] = repositoryId;
+
+			return View();
+		}
+
+		public async Task<IActionResult> NewRepository(string name)
+		{
+			ApplicationUser user = await CheckAndGetUserAsync();
+
+			Repository repository = await _manager.NewRepositoryAsync(name);
 
 			user.Repositories.Add(
 				new ApplicationUserRepository
@@ -66,12 +95,25 @@ namespace pbXStorage.Server.NETCore.Controllers
 
 			await _dbContext.SaveChangesAsync();
 
-			return RedirectToAction(nameof(HomeController.Index));
+			return RedirectToAction(nameof(HomeController.Repositories));
+		}
+
+		public async Task<IActionResult> Repository(string repositoryId)
+		{
+			ApplicationUser user = await CheckAndGetUserAsync();
+
+			Repository repository = await _manager.GetRepositoryAsync(repositoryId);
+
+			ViewData["repository"] = repository;
+
+			return View();
 		}
 
 		public async Task<IActionResult> RemoveRepository(string repositoryId)
 		{
-			ApplicationUser user = await GetUserAsync();
+			ApplicationUser user = await CheckAndGetUserAsync();
+
+			await _manager.RemoveRepositoryAsync(repositoryId);
 
 			_dbContext.Entry(user)
 				.Collection(nameof(ApplicationUser.Repositories))
@@ -81,15 +123,11 @@ namespace pbXStorage.Server.NETCore.Controllers
 
 			await _dbContext.SaveChangesAsync();
 
-			await _manager.RemoveRepositoryAsync(repositoryId);
-
-			return RedirectToAction(nameof(HomeController.Index));
+			return RedirectToAction(nameof(HomeController.Repositories));
 		}
 
 		public IActionResult About()
         {
-            ViewData["Message"] = "Your application description page.";
-
             return View();
         }
 

@@ -13,12 +13,17 @@ namespace pbXStorage.Server
 		public string Id { get; set; }
 
 		/// <summary>
-		/// Public key as readable string ready to store in storage, to send via net and to pass to RsaKeyPair constructor.
+		/// Repository name.
+		/// </summary>
+		public string Name { get; set; }
+
+		/// <summary>
+		/// Public key as readable string ready to store, to send via net and to pass to RsaKeyPair constructor.
 		/// </summary>
 		public string PublicKey { get; set; }
 
 		/// <summary>
-		/// Encrypted and obfuscated private key ready to store in storage.
+		/// Encrypted and obfuscated private key ready to store.
 		/// </summary>
 		public string PrivateKey { get; set; }
 
@@ -33,7 +38,7 @@ namespace pbXStorage.Server
 			: base(manager)
 		{ }
 
-		public static Repository New(Manager manager)
+		public static Repository New(Manager manager, string name)
 		{
 			if(manager == null)
 				throw new ArgumentNullException(nameof(manager));
@@ -41,6 +46,7 @@ namespace pbXStorage.Server
 			Repository repository = new Repository(manager);
 
 			repository.Id = Tools.CreateGuidEx();
+			repository.Name = name;
 
 			RsaCryptographer cryptographer = new RsaCryptographer();
 			repository._keys = cryptographer.GenerateKeyPair();

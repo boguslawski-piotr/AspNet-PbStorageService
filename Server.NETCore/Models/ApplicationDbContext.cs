@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using pbXStorage.Server.NETCore.Models;
+using pbXStorage.Server.NETCore.Services;
 
 namespace pbXStorage.Server.NETCore.Data
 {
@@ -24,6 +25,8 @@ namespace pbXStorage.Server.NETCore.Data
 
 	public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 	{
+		public DbSet<Thing> Things { get; set; }
+
 		public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
 			: base(options)
 		{ }
@@ -36,6 +39,15 @@ namespace pbXStorage.Server.NETCore.Data
 				.HasKey(c => new { c.RepositoryId, c.UserId });
 			builder.Entity<ApplicationUserRepository>()
 				.HasIndex(c => c.UserId);
+
+			builder.Entity<Thing>()
+				.HasKey(t => new { t.StorageId, t.Id });
+			builder.Entity<Thing>()
+				.HasIndex(t => t.StorageId);
+			builder.Entity<Thing>()
+				.HasIndex(t => t.Id);
+			builder.Entity<Thing>()
+				.ToTable("Things");
 
 			// Customize the ASP.NET Identity model and override the defaults if needed.
 			// For example, you can rename the ASP.NET Identity table names and more.
