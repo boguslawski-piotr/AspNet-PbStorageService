@@ -23,11 +23,11 @@ namespace pbXStorage.Server.NETCore
 	{
 		public IConfigurationRoot Configuration { get; }
 
-		IHostingEnvironment _env;
+		IHostingEnvironment _hosttingEnvironment;
 
 		public Startup(IHostingEnvironment env, ILoggerFactory loggerFactory)
 		{
-			_env = env;
+			_hosttingEnvironment = env;
 
 			var builder = new ConfigurationBuilder()
 				.SetBasePath(env.ContentRootPath)
@@ -60,77 +60,39 @@ namespace pbXStorage.Server.NETCore
 
 			string serverId = Configuration.GetValue<string>("ServerId");
 
-			DbContextOptionsBuilder ConfigureDbs(DbContextOptionsBuilder options)
+			DbContextOptionsBuilder ConfigureDbs(DbContextOptionsBuilder builder)
 			{
-				string[] ParseDbAndConnectionString(string s)
+				(string, string) ParseProviderAndConnectionString(string entryName, string defaultValue)
 				{
-					return
-						Environment.ExpandEnvironmentVariables(s)
+					string v = Configuration.GetValue<string>(entryName, null);
+					if (string.IsNullOrWhiteSpace(v))
+						v = defaultValue;
+					if (string.IsNullOrWhiteSpace(v))
+						return (null, null);
+
+					string[] pcs =
+						Environment.ExpandEnvironmentVariables(v)
 						.Replace("%ServerId%", serverId)
+						.Replace("%ContentRootPath%", _hosttingEnvironment.ContentRootPath)
 						.Replace('/', Path.DirectorySeparatorChar)
 						.Split(new char[] { ';' }, 2);
+
+					return (pcs[0], pcs.Length > 1 ? pcs[1] : "");
 				}
 
-				string UseDefaultDirectory()
-				{
-					string dir = Path.Combine(_env.ContentRootPath, serverId);
-					Directory.CreateDirectory(dir);
-					return dir;
-				}
+				(string provider, string connectionString) = ParseProviderAndConnectionString("MainDb", $"SQlite;Data Source={serverId}.db");
+				builder.UseDb(provider, connectionString);
 
-				string mainDb = Configuration.GetValue<string>(RepositoriesDbOptions.MainDbProvider, null);
-				if (string.IsNullOrWhiteSpace(mainDb))
-					mainDb = $"SQlite;Data Source={Path.Combine(UseDefaultDirectory(), $"{serverId}.db")}";
+				(provider, connectionString) = ParseProviderAndConnectionString("RepositoriesDb", null);
+				builder.UseRepositoriesDb(provider, connectionString);
 
-				string[] dbAndConnectionString = ParseDbAndConnectionString(mainDb);
-				string provider = dbAndConnectionString[0];
-				string connectionString = dbAndConnectionString.Length > 1 ? dbAndConnectionString[1] : "";
-
-				Log.I($"Main database: '{provider};{connectionString}'");
-
-				switch (provider.ToLower())
-				{
-					case "sqlite":
-						Directory.CreateDirectory(Path.GetDirectoryName(connectionString.Split('=')[1]));
-						options.UseSqlite(connectionString);
-						break;
-
-					case "mssqlserver":
-						options.UseSqlServer(connectionString);
-						break;
-
-					default:
-						throw new Exception("Incorrect format in MainDb entry in appsettings.json.");
-				}
-
-				string repositoriesDb = Configuration.GetValue<string>("RepositoriesDb", null);
-				if (string.IsNullOrWhiteSpace(repositoriesDb))
-					repositoriesDb = RepositoriesDbOptions.MainDbProvider;
-
-				dbAndConnectionString = ParseDbAndConnectionString(repositoriesDb);
-				provider = dbAndConnectionString[0];
-				connectionString = dbAndConnectionString.Length > 1 ? dbAndConnectionString[1] : "";
-
-				if (provider != RepositoriesDbOptions.MainDbProvider)
-				{
-					if (string.IsNullOrWhiteSpace(connectionString))
-						connectionString = UseDefaultDirectory();
-					Directory.CreateDirectory(connectionString);
-				}
-
-				Log.I($"Repositories database: '{provider};{connectionString}'");
-
-				((IDbContextOptionsBuilderInfrastructure)options)
-					.AddOrUpdateExtension(
-						new RepositoriesDbOptions(provider, connectionString)
-					);
-				return options;
+				return builder;
 			}
 
 			// Add framework services.
 
 			services.AddDbContext<ApplicationDbContext>(
-				(options) => ConfigureDbs(options)
+				(builder) => ConfigureDbs(builder)
 			);
 
 			services.AddIdentity<ApplicationUser, IdentityRole>()
