@@ -14,9 +14,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Repository.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)DbOnFileSystem.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)IDb.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)ManagedObject.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Manager.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)ManagerExtensions.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Storage.cs" />
   </ItemGroup>
 </Project>

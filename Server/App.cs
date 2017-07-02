@@ -3,7 +3,7 @@ using pbXNet;
 
 namespace pbXStorage.Server
 {
-	public class App : ManagedObject
+	public class App
 	{
 		public Repository Repository { get; }
 
@@ -18,7 +18,6 @@ namespace pbXStorage.Server
 		IAsymmetricCryptographerKeyPair _publicKey;
 
 		public App(Manager manager, Repository repository, string publicKey)
-			: base(manager)
 		{
 			Repository = repository ?? throw new ArgumentNullException(nameof(repository));
 			PublicKey = publicKey ?? throw new ArgumentNullException(nameof(publicKey));

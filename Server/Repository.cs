@@ -1,11 +1,12 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using pbXNet;
 
 namespace pbXStorage.Server
 {
 	[System.Serializable]
-	public class Repository : ManagedObject
+	public class Repository
 	{
 		/// <summary>
 		/// Repository identifier.
@@ -23,52 +24,31 @@ namespace pbXStorage.Server
 		public string PublicKey { get; set; }
 
 		/// <summary>
-		/// Encrypted and obfuscated private key ready to store.
+		/// Obfuscated private key ready to store.
 		/// </summary>
 		public string PrivateKey { get; set; }
 
 		// Real key pair used to encrypt/decrypt/sign/verify data.
 		IAsymmetricCryptographerKeyPair _keys;
 
-		public Repository()
-			: base(null)
-		{ }
-
-		public Repository(Manager manager)
-			: base(manager)
-		{ }
-
-		public static Repository New(Manager manager, string name)
+		public static Repository New(string name)
 		{
-			if(manager == null)
-				throw new ArgumentNullException(nameof(manager));
-
-			Repository repository = new Repository(manager);
-
-			repository.Id = Tools.CreateGuidEx();
-			repository.Name = name;
-
-			RsaCryptographer cryptographer = new RsaCryptographer();
-			repository._keys = cryptographer.GenerateKeyPair();
+			Repository repository = new Repository()
+			{
+				Id = Tools.CreateGuidEx(),
+				Name = name,
+				_keys = new RsaCryptographer().GenerateKeyPair()
+			};
 
 			repository.PublicKey = repository._keys.Public;
-			repository.PrivateKey = repository._keys.Private;
-
-			// TODO: encrypt repository.PrivateKey
-
-			repository.PrivateKey = Obfuscator.Obfuscate(repository.PrivateKey);
+			repository.PrivateKey = Obfuscator.Obfuscate(repository._keys.Private);
 
 			return repository;
 		}
 
-		public void InitializeAfterDeserialize(Manager manager)
+		public void InitializeAfterDeserialize()
 		{
-			Manager = manager ?? throw new ArgumentNullException(nameof(manager));
-
 			string privateKey = Obfuscator.DeObfuscate(PrivateKey);
-
-			// TODO: decrypt privateKey
-
 			_keys = new RsaKeyPair(privateKey, PublicKey);
 		}
 
@@ -80,6 +60,11 @@ namespace pbXStorage.Server
 		public string Decrypt(string data)
 		{
 			return RsaCryptographerHelper.Decrypt(data, _keys);
+		}
+
+		public async Task<IEnumerable<IdInDb>> FindIdsAsync(IDb db, string pattern)
+		{
+			return await db.FindAllIdsAsync(Id, pattern);
 		}
 	}
 }

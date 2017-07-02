@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -59,81 +60,85 @@ namespace pbXStorage.Server.NETCore
 
 			string serverId = Configuration.GetValue<string>("ServerId");
 
-			string[] ParseDbAndConnectionString(string s)
+			DbContextOptionsBuilder ConfigureDbs(DbContextOptionsBuilder options)
 			{
-				return
-					Environment.ExpandEnvironmentVariables(s)
-					.Replace("%ServerId%", serverId)
-					.Replace('/', Path.DirectorySeparatorChar)
-					.Split(new char[] { ';' }, 2);
-			}
-
-			string UseDefaultDirectory()
-			{
-				string dir = Path.Combine(_env.ContentRootPath, serverId);
-				Directory.CreateDirectory(dir);
-				return dir;
-			}
-
-			DbContextOptionsBuilder MainDb(DbContextOptionsBuilder options)
-			{
-				string mainDb = Configuration.GetValue<string>("MainDb", null);
-				if (string.IsNullOrWhiteSpace(mainDb))
+				string[] ParseDbAndConnectionString(string s)
 				{
-					mainDb = UseDefaultDirectory();
-					mainDb = $"SQlite;Data Source={Path.Combine(mainDb, $"{serverId}.db")}";
+					return
+						Environment.ExpandEnvironmentVariables(s)
+						.Replace("%ServerId%", serverId)
+						.Replace('/', Path.DirectorySeparatorChar)
+						.Split(new char[] { ';' }, 2);
 				}
+
+				string UseDefaultDirectory()
+				{
+					string dir = Path.Combine(_env.ContentRootPath, serverId);
+					Directory.CreateDirectory(dir);
+					return dir;
+				}
+
+				string mainDb = Configuration.GetValue<string>(RepositoriesDbOptions.MainDbProvider, null);
+				if (string.IsNullOrWhiteSpace(mainDb))
+					mainDb = $"SQlite;Data Source={Path.Combine(UseDefaultDirectory(), $"{serverId}.db")}";
 
 				string[] dbAndConnectionString = ParseDbAndConnectionString(mainDb);
+				string provider = dbAndConnectionString[0];
+				string connectionString = dbAndConnectionString.Length > 1 ? dbAndConnectionString[1] : "";
 
-				Log.I($"Main database: '{dbAndConnectionString[0]};{dbAndConnectionString[1]}");
+				Log.I($"Main database: '{provider};{connectionString}'");
 
-				switch (dbAndConnectionString[0].ToLower())
+				switch (provider.ToLower())
 				{
 					case "sqlite":
-						Directory.CreateDirectory(Path.GetDirectoryName(dbAndConnectionString[1].Split('=')[1]));
-						return options.UseSqlite(dbAndConnectionString[1]);
+						Directory.CreateDirectory(Path.GetDirectoryName(connectionString.Split('=')[1]));
+						options.UseSqlite(connectionString);
+						break;
 
 					case "mssqlserver":
-						return options.UseSqlServer(dbAndConnectionString[1]);
-				}
+						options.UseSqlServer(connectionString);
+						break;
 
-				throw new Exception("Incorrect data format in MainDb in appsettings.json.");
-			}
-
-			IDb RepositoriesDb(ApplicationDbContext mainDb)
-			{
-				const string UseMainDb = "UseMainDb";
-
-				string repositoriesDb = Configuration.GetValue<string>("RepositoriesDb", UseMainDb);
-				if (string.IsNullOrWhiteSpace(repositoriesDb))
-					repositoriesDb = UseMainDb;
-
-				Log.I($"Repositories database: '{repositoriesDb}'");
-
-				switch (repositoriesDb)
-				{
 					default:
-						string[] dbAndConnectionString = ParseDbAndConnectionString(repositoriesDb);
-						if (string.IsNullOrWhiteSpace(dbAndConnectionString[1]))
-							dbAndConnectionString[1] = UseDefaultDirectory();
-
-						return new DbOnFileSystem(dbAndConnectionString[1]);
-
-					case UseMainDb:
-						return new DbOnEF(mainDb.Things, mainDb);
+						throw new Exception("Incorrect format in MainDb entry in appsettings.json.");
 				}
+
+				string repositoriesDb = Configuration.GetValue<string>("RepositoriesDb", null);
+				if (string.IsNullOrWhiteSpace(repositoriesDb))
+					repositoriesDb = RepositoriesDbOptions.MainDbProvider;
+
+				dbAndConnectionString = ParseDbAndConnectionString(repositoriesDb);
+				provider = dbAndConnectionString[0];
+				connectionString = dbAndConnectionString.Length > 1 ? dbAndConnectionString[1] : "";
+
+				if (provider != RepositoriesDbOptions.MainDbProvider)
+				{
+					if (string.IsNullOrWhiteSpace(connectionString))
+						connectionString = UseDefaultDirectory();
+					Directory.CreateDirectory(connectionString);
+				}
+
+				Log.I($"Repositories database: '{provider};{connectionString}'");
+
+				((IDbContextOptionsBuilderInfrastructure)options)
+					.AddOrUpdateExtension(
+						new RepositoriesDbOptions(provider, connectionString)
+					);
+				return options;
 			}
 
 			// Add framework services.
 
-			services.AddDbContext<ApplicationDbContext>(options => MainDb(options));
+			services.AddDbContext<ApplicationDbContext>(
+				(options) => ConfigureDbs(options)
+			);
 
 			services.AddIdentity<ApplicationUser, IdentityRole>()
 				.AddEntityFrameworkStores<ApplicationDbContext>()
 				.AddDefaultTokenProviders();
 
 			services.AddMvc();
+
 			services.AddDataProtection();
 
 			// Add other services.
@@ -147,18 +152,11 @@ namespace pbXStorage.Server.NETCore
 
 			IDataProtector protector = applicationServices.GetDataProtector(serverId);
 
-			ApplicationDbContext dbContext = applicationServices.GetService<ApplicationDbContext>();
-			dbContext.Database.EnsureCreated();
-
 			services.AddSingleton(
-				new Manager()
-					.SetId(serverId)
-					.UseDb(RepositoriesDb(dbContext))
-					.UseSimpleCryptographer(new SimpleCryptographer2DataProtector(protector))
+				new Manager(serverId, new SimpleCryptographer2DataProtector(protector))
 			);
 		}
 
-		// This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
 		public async void Configure(IApplicationBuilder app, IHostingEnvironment env, ILoggerFactory loggerFactory, Manager manager)
 		{
 			// Setup error page.
@@ -174,7 +172,7 @@ namespace pbXStorage.Server.NETCore
 				app.UseExceptionHandler("/Home/Error");
 			}
 
-			// Use MVC framework.
+			// Use/initialize MVC framework.
 
 			app.UseStaticFiles();
 
@@ -189,9 +187,18 @@ namespace pbXStorage.Server.NETCore
 					template: "{controller=Home}/{action=Index}/{id?}");
 			});
 
+			// Initialize main db.
+
+			ApplicationDbContext dbContext = app.ApplicationServices.GetService<ApplicationDbContext>();
+			dbContext.Database.EnsureCreated();
+
 			// Initialize pbXStorage.
 
-			await manager.InitializeAsync();
+			await manager.InitializeAsync(
+				manager.CreateContext(
+					dbContext.RepositoriesDb
+				)
+			);
 		}
 	}
 }

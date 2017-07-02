@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
+using pbXNet;
 
 namespace pbXStorage.Server
 {
@@ -16,22 +16,18 @@ namespace pbXStorage.Server
 		public DateTime ModifiedOn { get; set; }
 	}
 
-	public class DbOnEF : ManagedObject, IDb
+	public class DbOnEF : IDb
 	{
-		public bool Initialized => true;
+		public ISimpleCryptographer Cryptographer { get; set; }
 
 		DbSet<Thing> _things;
 		DbContext _db;
 
-		public DbOnEF(DbSet<Thing> things, DbContext db, Manager manager = null)
-			: base(manager)
+		public DbOnEF(DbSet<Thing> things, DbContext db)
 		{
 			_things = things;
 			_db = db;
 		}
-
-		public async Task InitializeAsync()
-		{ }
 
 		public async Task StoreThingAsync(string storageId, string thingId, string data, DateTime modifiedOn)
 		{
@@ -47,8 +43,8 @@ namespace pbXStorage.Server
 				_things.Add(t);
 			}
 
-			if (Manager != null)
-				data = Manager.Cryptographer != null ? Manager.Cryptographer.Encrypt(data) : data;
+			if (Cryptographer != null)
+				data = Cryptographer.Encrypt(data);
 
 			t.Data = data;
 			t.ModifiedOn = modifiedOn;
@@ -77,9 +73,9 @@ namespace pbXStorage.Server
 				throw new Exception($"'{storageId}/{thingId}' was not found.");
 
 			string data = t.Data;
-			
-			if (Manager != null)
-				data = Manager.Cryptographer != null ? Manager.Cryptographer.Decrypt(data) : data;
+
+			if (Cryptographer != null)
+				data = Cryptographer.Decrypt(data);
 
 			return data;
 		}
@@ -123,7 +119,7 @@ namespace pbXStorage.Server
 			await _db.SaveChangesAsync();
 		}
 
-		public async Task<IEnumerable<IdInDb>> FindIdsAsync(string storageId, string pattern)
+		public async Task<IEnumerable<IdInDb>> FindAllIdsAsync(string storageId, string pattern)
 		{
 			List<IdInDb> ids = new List<IdInDb>();
 
@@ -135,13 +131,11 @@ namespace pbXStorage.Server
 
 			IEnumerable<IGrouping<string, Thing>> ss = ts.GroupBy<Thing, string>((_t) => _t.StorageId);
 
-			IdInDb ss2sids(IGrouping<string, Thing> s)
+			var sids = ss.Select((IGrouping < string, Thing > s) =>
 			{
 				string[] _sids = s.Key.Split('/');
 				return new IdInDb { Type = IdInDbType.Storage, Id = _sids[_sids.Length - 1], StorageId = _sids[0] };
-			}
-
-			var sids = ss.Select(ss2sids);
+			});
 
 			ids.AddRange(sids);
 

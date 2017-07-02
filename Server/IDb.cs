@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using pbXNet;
 
 namespace pbXStorage.Server
 {
@@ -21,8 +22,7 @@ namespace pbXStorage.Server
 
 	public interface IDb
 	{
-		bool Initialized { get; }
-		Task InitializeAsync();
+		ISimpleCryptographer Cryptographer { get; set; }
 
 		// storageId is always in the following format:
 		// repositoryId/storageId
@@ -39,6 +39,6 @@ namespace pbXStorage.Server
 		// repositoryId
 
 		Task DiscardAllAsync(string storageId);
-		Task<IEnumerable<IdInDb>> FindIdsAsync(string storageId, string pattern);
+		Task<IEnumerable<IdInDb>> FindAllIdsAsync(string storageId, string pattern);
 	};
 }

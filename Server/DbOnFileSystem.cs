@@ -2,38 +2,28 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using pbXNet;
-using System.Linq;
-using System.Text.RegularExpressions;
 
 namespace pbXStorage.Server
 {
-	public class DbOnFileSystem : ManagedObject, IDb
+	public class DbOnFileSystem : IDb
 	{
-		public bool Initialized { get; private set; }
-
-		string _directory;
+		public ISimpleCryptographer Cryptographer { get; set; }
 
 		IFileSystem _fs;
 
 		ConcurrentDictionary<string, SemaphoreSlim> _locks = new ConcurrentDictionary<string, SemaphoreSlim>();
 
-		public DbOnFileSystem(string directory = null, Manager manager = null)
-			: base(manager)
+		public DbOnFileSystem(string directory = null)
 		{
-			_directory = directory;
-		}
+			_fs = new DeviceFileSystem(DeviceFileSystemRoot.UserDefined, directory ?? "~");
 
-		public async Task InitializeAsync()
-		{
-			_fs = new DeviceFileSystem(DeviceFileSystemRoot.UserDefined, _directory ?? "~");
-
-			Initialized = true;
-
-			Log.I($"Data will be stored in directory: '{_directory}'.", this);
+			Log.I($"Data will be stored in directory: '{directory}'.", this);
 		}
 
 		async Task<IFileSystem> GetFs(string storageId)
@@ -82,8 +72,8 @@ namespace pbXStorage.Server
 		{
 			await ExecuteInLock(storageId, thingId, async (IFileSystem fs) =>
 			{
-				if (Manager != null)
-					data = Manager.Cryptographer != null ? Manager.Cryptographer.Encrypt(data) : data;
+				if (Cryptographer != null)
+					data = Cryptographer.Encrypt(data);
 
 				await fs.WriteTextAsync(thingId, data).ConfigureAwait(false);
 				await fs.SetFileModifiedOnAsync(thingId, modifiedOn).ConfigureAwait(false);
@@ -125,8 +115,8 @@ namespace pbXStorage.Server
 
 				string data = await fs.ReadTextAsync(thingId).ConfigureAwait(false);
 
-				if (Manager != null)
-					data = Manager.Cryptographer != null ? Manager.Cryptographer.Decrypt(data) : data;
+				if (Cryptographer != null)
+					data = Cryptographer.Decrypt(data);
 
 				return data;
 			})
@@ -193,14 +183,14 @@ namespace pbXStorage.Server
 			}
 		}
 
-		public async Task<IEnumerable<IdInDb>> FindIdsAsync(string storageId, string pattern)
+		public async Task<IEnumerable<IdInDb>> FindAllIdsAsync(string storageId, string pattern)
 		{
 			IFileSystem fs = await GetFs(storageId).ConfigureAwait(false);
 			List<IdInDb> ids = new List<IdInDb>();
 
 			foreach (var sid in await fs.GetDirectoriesAsync().ConfigureAwait(false))
 			{
-				var _ids = await FindIdsAsync(Path.Combine(storageId, sid), pattern).ConfigureAwait(false);
+				var _ids = await FindAllIdsAsync(Path.Combine(storageId, sid), pattern).ConfigureAwait(false);
 				ids.AddRange(_ids);
 				if (_ids.Any() || Regex.IsMatch(sid, pattern))
 					ids.Add(new IdInDb { Type = IdInDbType.Storage, Id = sid, StorageId = storageId.Replace(Path.DirectorySeparatorChar, '/') });

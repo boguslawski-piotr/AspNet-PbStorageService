@@ -41,13 +41,15 @@ using pbXNet;
 
 namespace pbXStorage.Server
 {
+	public class Context
+	{
+		public IDb RepositoriesDb { get; set; }
+		public ISimpleCryptographer Cryptographer { get; set; }
+	}
+
 	public class Manager
 	{
 		public string Id { get; set; }
-
-		public IDb Db { get; set; }
-
-		public ISimpleCryptographer Cryptographer { get; set; }
 
 		ConcurrentDictionary<string, Repository> _repositories = new ConcurrentDictionary<string, Repository>();
 
@@ -57,15 +59,31 @@ namespace pbXStorage.Server
 
 		ISerializer _serializer { get; set; } = new NewtonsoftJsonSerializer();
 
-		public async Task InitializeAsync()
+		ISimpleCryptographer _cryptographer { get; set; }
+
+		public Manager(string id, ISimpleCryptographer cryptographer = null, ISerializer serializer = null)
 		{
-			if (Id == null || Db == null)
-				throw new ArgumentException($"{nameof(Id)} and {nameof(Db)} must be valid objects.");
+			Id = id ?? throw new ArgumentException($"{nameof(Id)} must be valid object.");
 
-			if (!Db.Initialized)
-				await Db.InitializeAsync();
+			_cryptographer = cryptographer;
 
-			await LoadRepositoriesAsync();
+			if (serializer != null)
+				_serializer = serializer;
+		}
+
+		public Context CreateContext(IDb repositoriesDb)
+		{
+			repositoriesDb.Cryptographer = _cryptographer;
+			return new Context
+			{
+				RepositoriesDb = repositoriesDb,
+				Cryptographer = _cryptographer,
+			};
+		}
+
+		public async Task InitializeAsync(Context ctx)
+		{
+			await LoadRepositoriesAsync(ctx);
 		}
 
 		#region Repositories
@@ -74,25 +92,25 @@ namespace pbXStorage.Server
 
 		readonly SemaphoreSlim _repositoriesLock = new SemaphoreSlim(1);
 
-		public async Task LoadRepositoriesAsync()
+		public async Task LoadRepositoriesAsync(Context ctx)
 		{
 			await _repositoriesLock.WaitAsync().ConfigureAwait(false);
 			try
 			{
-				if (await Db.ThingExistsAsync(Id, _repositoriesThingId).ConfigureAwait(false))
+				if (await ctx.RepositoriesDb.ThingExistsAsync(Id, _repositoriesThingId).ConfigureAwait(false))
 				{
-					string d = await Db.GetThingCopyAsync(Id, _repositoriesThingId).ConfigureAwait(false);
+					string d = await ctx.RepositoriesDb.GetThingCopyAsync(Id, _repositoriesThingId).ConfigureAwait(false);
 					if (d != null)
 					{
-						if (Cryptographer != null)
-							d = Cryptographer.Decrypt(d);
+						if (ctx.Cryptographer != null)
+							d = ctx.Cryptographer.Decrypt(d);
 
 						d = Obfuscator.DeObfuscate(d);
 
 						_repositories = _serializer.Deserialize<ConcurrentDictionary<string, Repository>>(d);
 
 						foreach (var repository in _repositories.Values)
-							repository.InitializeAfterDeserialize(this);
+							repository.InitializeAfterDeserialize();
 					}
 				}
 
@@ -109,7 +127,7 @@ namespace pbXStorage.Server
 			}
 		}
 
-		public async Task SaveRepositoriesAsync()
+		public async Task SaveRepositoriesAsync(Context ctx)
 		{
 			await _repositoriesLock.WaitAsync().ConfigureAwait(false);
 			try
@@ -118,10 +136,10 @@ namespace pbXStorage.Server
 
 				d = Obfuscator.Obfuscate(d);
 
-				if (Cryptographer != null)
-					d = Cryptographer.Encrypt(d);
+				if (ctx.Cryptographer != null)
+					d = ctx.Cryptographer.Encrypt(d);
 
-				await Db.StoreThingAsync(Id, _repositoriesThingId, d, DateTime.UtcNow).ConfigureAwait(false);
+				await ctx.RepositoriesDb.StoreThingAsync(Id, _repositoriesThingId, d, DateTime.UtcNow).ConfigureAwait(false);
 			}
 			catch (Exception ex)
 			{
@@ -134,15 +152,15 @@ namespace pbXStorage.Server
 			}
 		}
 
-		public async Task<Repository> NewRepositoryAsync(string name)
+		public async Task<Repository> NewRepositoryAsync(Context ctx, string name)
 		{
 			try
 			{
-				Repository repository = Repository.New(this, name);
+				Repository repository = Repository.New(name);
 
 				_repositories[repository.Id] = repository;
 
-				await SaveRepositoriesAsync().ConfigureAwait(false);
+				await SaveRepositoriesAsync(ctx).ConfigureAwait(false);
 
 				Log.I($"created new repository '{repository.Id}'.", this);
 
@@ -155,7 +173,7 @@ namespace pbXStorage.Server
 			}
 		}
 
-		public async Task<Repository> GetRepositoryAsync(string repositoryId)
+		public async Task<Repository> GetRepositoryAsync(Context ctx, string repositoryId)
 		{
 			try
 			{
@@ -168,15 +186,15 @@ namespace pbXStorage.Server
 			}
 		}
 
-		public async Task RemoveRepositoryAsync(string repositoryId)
+		public async Task RemoveRepositoryAsync(Context ctx, string repositoryId)
 		{
 			try
 			{
-				await Db.DiscardAllAsync(repositoryId);
+				await ctx.RepositoriesDb.DiscardAllAsync(repositoryId);
 
 				_repositories.TryRemove(repositoryId, out Repository r);
 
-				await SaveRepositoriesAsync().ConfigureAwait(false);
+				await SaveRepositoriesAsync(ctx).ConfigureAwait(false);
 
 				Log.I($"removed repository '{repositoryId}'.", this);
 			}
@@ -191,7 +209,7 @@ namespace pbXStorage.Server
 
 		#region Apps
 
-		public async Task<string> RegisterAppAsync(string repositoryId, string appPublicKey)
+		public async Task<string> RegisterAppAsync(Context ctx, string repositoryId, string appPublicKey)
 		{
 			if (_repositories.TryGetValue(repositoryId, out Repository repository))
 			{
@@ -213,20 +231,20 @@ namespace pbXStorage.Server
 				}
 				catch (Exception ex)
 				{
-					return Error($"1002,{ex.Message}");
+					return ERROR($"1002,{ex.Message}");
 				}
 
-				return Error("1001,Failed to register application.");
+				return ERROR("1001,Failed to register application.");
 			}
 
-			return Error($"1000,Repository doesn't exist.");
+			return ERROR($"1000,Repository doesn't exist.");
 		}
 
 		#endregion
 
 		#region Storages
 
-		public async Task<string> OpenStorageAsync(string appToken, string storageId)
+		public async Task<string> OpenStorageAsync(Context ctx, string appToken, string storageId)
 		{
 			if (_apps.TryGetValue(appToken, out App app))
 			{
@@ -235,7 +253,7 @@ namespace pbXStorage.Server
 					Storage storage = _storages.Values.ToList().Find((_storage) => (_storage.App.Token == appToken && _storage.Id == storageId));
 					if (storage == null)
 					{
-						storage = new Storage(this, app, storageId);
+						storage = new Storage(app, storageId);
 						_storages[storage.Token] = storage;
 
 						Log.I($"created '{storageId}' for app '{app.Token}'.", this);
@@ -250,13 +268,13 @@ namespace pbXStorage.Server
 				}
 				catch (Exception ex)
 				{
-					return Error($"2002,{ex.Message}");
+					return ERROR($"2002,{ex.Message}");
 				}
 
-				return Error("2001,Failed to create/open storage.");
+				return ERROR("2001,Failed to create/open storage.");
 			}
 
-			return Error($"2000,Incorrect application token.");
+			return ERROR($"2000,Incorrect application token.");
 		}
 
 		#endregion
@@ -274,60 +292,60 @@ namespace pbXStorage.Server
 				}
 				catch (Exception ex)
 				{
-					return Error($"3001,{ex.Message}", callerName);
+					return ERROR($"3001,{ex.Message}", callerName);
 				}
 			}
 
-			return Error($"3000,Incorrect storage token.", callerName);
+			return ERROR($"3000,Incorrect storage token.", callerName);
 		}
 
-		public async Task<string> StoreThingAsync(string storageToken, string thingId, string data)
+		public async Task<string> StoreThingAsync(Context ctx, string storageToken, string thingId, string data)
 		{
 			return await ExecuteInStorage(storageToken, async (Storage storage) =>
 			{
-				await storage.StoreAsync(thingId, BODY(data)).ConfigureAwait(false);
+				await storage.StoreAsync(ctx.RepositoriesDb, thingId, BODY(data)).ConfigureAwait(false);
 				return OK();
 			}).ConfigureAwait(false);
 		}
 
-		public async Task<string> ThingExistsAsync(string storageToken, string thingId)
+		public async Task<string> ThingExistsAsync(Context ctx, string storageToken, string thingId)
 		{
 			return await ExecuteInStorage(storageToken, async (Storage storage) =>
 			{
-				return OK(await storage.ExistsAsync(thingId).ConfigureAwait(false));
+				return OK(await storage.ExistsAsync(ctx.RepositoriesDb, thingId).ConfigureAwait(false));
 			}).ConfigureAwait(false);
 		}
 
-		public async Task<string> GetThingModifiedOnAsync(string storageToken, string thingId)
+		public async Task<string> GetThingModifiedOnAsync(Context ctx, string storageToken, string thingId)
 		{
 			return await ExecuteInStorage(storageToken, async (Storage storage) =>
 			{
-				return OK(await storage.GetModifiedOnAsync(thingId).ConfigureAwait(false));
+				return OK(await storage.GetModifiedOnAsync(ctx.RepositoriesDb, thingId).ConfigureAwait(false));
 			}).ConfigureAwait(false);
 		}
 
-		public async Task<string> GetThingCopyAsync(string storageToken, string thingId)
+		public async Task<string> GetThingCopyAsync(Context ctx, string storageToken, string thingId)
 		{
 			return await ExecuteInStorage(storageToken, async (Storage storage) =>
 			{
-				return OK(await storage.GetACopyAsync(thingId).ConfigureAwait(false));
+				return OK(await storage.GetACopyAsync(ctx.RepositoriesDb, thingId).ConfigureAwait(false));
 			}).ConfigureAwait(false);
 		}
 
-		public async Task<string> DiscardThingAsync(string storageToken, string thingId)
+		public async Task<string> DiscardThingAsync(Context ctx, string storageToken, string thingId)
 		{
 			return await ExecuteInStorage(storageToken, async (Storage storage) =>
 			{
-				await storage.DiscardAsync(thingId).ConfigureAwait(false);
+				await storage.DiscardAsync(ctx.RepositoriesDb, thingId).ConfigureAwait(false);
 				return OK();
 			}).ConfigureAwait(false);
 		}
 
-		public async Task<string> FindThingIdsAsync(string storageToken, string pattern)
+		public async Task<string> FindThingIdsAsync(Context ctx, string storageToken, string pattern)
 		{
 			return await ExecuteInStorage(storageToken, async (Storage storage) =>
 			{
-				return OK(await storage.FindIdsAsync(pattern).ConfigureAwait(false));
+				return OK(await storage.FindIdsAsync(ctx.RepositoriesDb, pattern).ConfigureAwait(false));
 			}).ConfigureAwait(false);
 		}
 
@@ -347,7 +365,7 @@ namespace pbXStorage.Server
 			return Obfuscator.Obfuscate(data);
 		}
 
-		string Error(string message, [CallerMemberName]string callerName = null)
+		string ERROR(string message, [CallerMemberName]string callerName = null)
 		{
 			Log.E(message, this, callerName);
 			return Obfuscator.Obfuscate($"ERROR,{message}");
