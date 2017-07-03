@@ -2,6 +2,7 @@
 using System.IO;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration.CommandLine;
 
 namespace pbXStorage.Server.NETCore
 {
@@ -9,18 +10,19 @@ namespace pbXStorage.Server.NETCore
     {
 		public static void Main(string[] args)
         {
-			string contentRoot = args.Length > 0 ? Path.GetFullPath(args[0]) : Directory.GetCurrentDirectory();
+			string contentRoot = Directory.GetCurrentDirectory();
 
 			var config = new ConfigurationBuilder()
 				.SetBasePath(contentRoot)
 				.AddJsonFile("hostingsettings.json", optional: true)
+				.AddCommandLine(args)
 				.Build();
 
 			var host = new WebHostBuilder()
-                .UseKestrel()
 				.UseContentRoot(contentRoot)
-                .UseIISIntegration()
 				.UseConfiguration(config)
+				.UseKestrel()
+				.UseIISIntegration()
                 .UseStartup<Startup>()
                 //.UseApplicationInsights()
                 .Build();
