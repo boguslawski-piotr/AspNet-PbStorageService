@@ -31,7 +31,10 @@ namespace pbXStorage.Server
 		// Real key pair used to encrypt/decrypt/sign/verify data.
 		IAsymmetricCryptographerKeyPair _keys;
 
-		public static Repository New(string name)
+		[NonSerialized]
+		public DateTime AccesedOn;
+
+		public static async Task<Repository> NewAsync(Context ctx, string storageId, string name)
 		{
 			Repository repository = new Repository()
 			{
@@ -43,13 +46,38 @@ namespace pbXStorage.Server
 			repository.PublicKey = repository._keys.Public;
 			repository.PrivateKey = Obfuscator.Obfuscate(repository._keys.Private);
 
+			string d = ctx.Serializer.Serialize(repository);
+
+			d = Obfuscator.Obfuscate(d);
+			if (ctx.Cryptographer != null)
+				d = ctx.Cryptographer.Encrypt(d);
+
+			await ctx.RepositoriesDb.StoreThingAsync(storageId, repository.Id, d, DateTime.UtcNow).ConfigureAwait(false);
+
+			repository.AccesedOn = DateTime.Now;
 			return repository;
 		}
 
-		public void InitializeAfterDeserialize()
+		public static async Task<Repository> LoadAsync(Context ctx, string storageId, string id)
 		{
-			string privateKey = Obfuscator.DeObfuscate(PrivateKey);
-			_keys = new RsaKeyPair(privateKey, PublicKey);
+			string d = await ctx.RepositoriesDb.GetThingCopyAsync(storageId, id).ConfigureAwait(false);
+
+			if (ctx.Cryptographer != null)
+				d = ctx.Cryptographer.Decrypt(d);
+			d = Obfuscator.DeObfuscate(d);
+
+			Repository repository = ctx.Serializer.Deserialize<Repository>(d);
+
+			repository._keys = new RsaKeyPair(Obfuscator.DeObfuscate(repository.PrivateKey), repository.PublicKey);
+
+			repository.AccesedOn = DateTime.Now;
+			return repository;
+		}
+
+		public static async Task RemoveAsync(Context ctx, string storageId, string id)
+		{
+			await ctx.RepositoriesDb.DiscardAllAsync(id);
+			await ctx.RepositoriesDb.DiscardThingAsync(storageId, id);
 		}
 
 		public string Sign(string data)
@@ -62,9 +90,9 @@ namespace pbXStorage.Server
 			return RsaCryptographerHelper.Decrypt(data, _keys);
 		}
 
-		public async Task<IEnumerable<IdInDb>> FindIdsAsync(IDb db, string pattern)
+		public async Task<IEnumerable<IdInDb>> FindIdsAsync(Context ctx, string pattern)
 		{
-			return await db.FindAllIdsAsync(Id, pattern);
+			return await ctx.RepositoriesDb.FindAllIdsAsync(Id, pattern);
 		}
 	}
 }

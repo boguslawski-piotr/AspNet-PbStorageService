@@ -17,15 +17,19 @@ namespace pbXStorage.Server
 		// Decrypted app public key used to encrypt data which will be send to app from server.
 		IAsymmetricCryptographerKeyPair _publicKey;
 
-		public App(Manager manager, Repository repository, string publicKey)
+		[NonSerialized]
+		public DateTime AccesedOn;
+
+		public App(Repository repository, string publicKey)
 		{
 			Repository = repository ?? throw new ArgumentNullException(nameof(repository));
 			PublicKey = publicKey ?? throw new ArgumentNullException(nameof(publicKey));
 
 			Token = Tools.CreateGuidEx();
 
-			publicKey = Repository.Decrypt(PublicKey);
-			_publicKey = new RsaKeyPair(null, publicKey);
+			_publicKey = new RsaKeyPair(null, Repository.Decrypt(PublicKey));
+
+			AccesedOn = DateTime.Now;
 		}
 
 		public string Encrypt(string data)

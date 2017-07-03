@@ -7,50 +7,27 @@ using pbXNet;
 
 namespace pbXStorage.Server.NETCore.Data
 {
-	class RepositoriesDbOptions : IDbContextOptionsExtension
-	{
-		public const string SQliteProvider = "sqlite";
-		public const string SqlServerProvider = "sqlserver";
-		public const string DbOnFileSystemProvider = "dbonfilesystem";
-
-		public string Provider;
-		public string ConnectionString;
-
-		public RepositoriesDbOptions(string provider, string connectionString)
-		{
-			Provider = provider;
-			ConnectionString = connectionString;
-		}
-
-		public void ApplyServices(IServiceCollection services)
-		{
-			if (Provider != null)
-				services.AddSingleton(new DbOnFileSystem(ConnectionString));
-		}
-	}
-
 	public static class DbContextOptionsBuilderExtensions
 	{
 		public static DbContextOptionsBuilder UseDb(this DbContextOptionsBuilder builder, string provider, string connectionString)
 		{
-			Log.I($"'{provider};{connectionString}'");
+			Log.I($"Application database '{provider};{connectionString}'.");
 
 			switch (provider.ToLower())
 			{
-				case RepositoriesDbOptions.SQliteProvider:
+				case RepositoriesDbOptionsExtension.SQliteProvider:
 					string dbDirectory = Path.GetDirectoryName(connectionString.Split('=')[1]);
 					if (!string.IsNullOrWhiteSpace(dbDirectory))
 						Directory.CreateDirectory(dbDirectory);
-
 					builder.UseSqlite(connectionString);
 					break;
 
-				case RepositoriesDbOptions.SqlServerProvider:
+				case RepositoriesDbOptionsExtension.SqlServerProvider:
 					builder.UseSqlServer(connectionString);
 					break;
 
 				default:
-					throw new Exception("Unsupported provider in MainDb configuration entry.");
+					throw new Exception($"Unsupported database provider '{provider}'.");
 			}
 
 			return builder;
@@ -62,22 +39,24 @@ namespace pbXStorage.Server.NETCore.Data
 			{
 				switch (provider.ToLower())
 				{
-					case RepositoriesDbOptions.DbOnFileSystemProvider:
+					case RepositoriesDbOptionsExtension.DbOnFileSystemProvider:
 						break;
 					default:
-						throw new Exception("Unsupported provider in RepositoriesDb configuration entry.");
+						throw new Exception($"Unsupported repositories database provider '{provider}'.");
 				}
 
 				Log.I($"'{provider};{connectionString}'");
 			}
 			else
-				Log.I($"same as in UseDb");
+				Log.I("data will be stored in application database.");
 
 
 			((IDbContextOptionsBuilderInfrastructure)builder)
 				.AddOrUpdateExtension(
-					new RepositoriesDbOptions(provider, connectionString)
+					new RepositoriesDbOptionsExtension(provider, connectionString)
 				);
+
+			//return new DbContextOptionsBuilder(builder.Options.WithExtension(new RepositoriesDbOptions(provider, connectionString)));
 
 			return builder;
 		}

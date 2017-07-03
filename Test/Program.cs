@@ -13,8 +13,8 @@ namespace Test.NETStd
 		{
 			ApiUri = new Uri("http://10.211.55.3:23456/api/storage/"),
 			AppKeys = new RsaCryptographer().GenerateKeyPair(),
-			RepositoryId = "bd6f2f1789a94c92bd88992b459e581d636345434041681372",
-			RepositoryPublicKey = new RsaKeyPair(null, "HY5JjkUxCANPFImZsAQC9z9Sv9/y1q7yOQcQAPCczF7IMCNGR5BGcq2LYyn8/GHzXZQKlQ2JuHpbrzwF9h4dF4Ho3KxBM7W5+2iNo9vMdscEM8J/saLJJWbnDHj1VIBmXxuaqrFg0LUXtZ/rc1B9A66Xv7ogDwt5C2jo/5+NnUpnviIOHlUJ913hj/nRKEWZetv74vOyAi26MoApMTjh/c75Aw=="),
+			RepositoryId = "9ee5df5824094f8199f1ebdc6938ab79636346268348544669",
+			RepositoryPublicKey = new RsaKeyPair(null, "FY63EQQxDAMruhk6kVRI239Jr88QLBb4vg8QAPD7ojhTOmL5bEdJ8wHoRGNdlDoxqtu691wR3VhrZ4U8QsMzwnDKxbL2ovU1SLIM1tGj8LpwQZOkScjRZF/AcpcectNK99PFbM8AdJMg4W/aqSQH0lqcqIOXAKIR6vmuzKOjezwhi62i0N4LtqnuSOW3k7E7krRewc73JLNfwxuthqBSIvf7fg=="),
 		};
 
 		// given from server during communication
@@ -251,7 +251,7 @@ namespace Test.NETStd
 			await OpenStorageTestAsync(appToken, "test2");
 
 			//List<Task> l = new List<Task>();
-			for (int i = 0; i < 1000; i++)
+			for (int i = 0; i < 100; i++)
 			{
 				//l.Add(StoreThingTestAsync(storageToken, "test thing " + i.ToString(), "jakies dane....", (DateTime.Now - TimeSpan.FromHours(3))));
 				await StoreThingTestAsync(storageToken, "test thing " + i.ToString(), "jakies dane....", (DateTime.Now - TimeSpan.FromHours(3)));

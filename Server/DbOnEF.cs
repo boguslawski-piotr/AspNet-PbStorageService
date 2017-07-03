@@ -92,18 +92,28 @@ namespace pbXStorage.Server
 
 		public async Task<IEnumerable<IdInDb>> FindThingIdsAsync(string storageId, string pattern)
 		{
-			IEnumerable<Thing> ts = _things
-				.AsNoTracking()
-				.Where((_t) =>
-					_t.StorageId == storageId &&
-					Regex.IsMatch(_t.Id, pattern)
-				);
+			IEnumerable<Thing> ts = null;
+
+			if (string.IsNullOrWhiteSpace(pattern))
+				ts = _things.AsNoTracking()
+					.Where((_t) => _t.StorageId == storageId);
+			else
+				ts = _things.AsNoTracking()
+					.Where((_t) =>
+						_t.StorageId == storageId &&
+						Regex.IsMatch(_t.Id, pattern)
+					);
 
 			return ts.Select<Thing, IdInDb>((t) => new IdInDb { Type = IdInDbType.Thing, Id = t.Id, StorageId = t.StorageId });
 		}
 
 		IEnumerable<Thing> FindAllIds(string storageId, string pattern)
 		{
+			if (string.IsNullOrWhiteSpace(pattern))
+				return _things
+					.AsNoTracking()
+					.Where((_t) => _t.StorageId.StartsWith(storageId));
+
 			return _things
 				.AsNoTracking()
 				.Where((_t) =>
@@ -131,7 +141,7 @@ namespace pbXStorage.Server
 
 			IEnumerable<IGrouping<string, Thing>> ss = ts.GroupBy<Thing, string>((_t) => _t.StorageId);
 
-			var sids = ss.Select((IGrouping < string, Thing > s) =>
+			var sids = ss.Select((IGrouping<string, Thing> s) =>
 			{
 				string[] _sids = s.Key.Split('/');
 				return new IdInDb { Type = IdInDbType.Storage, Id = _sids[_sids.Length - 1], StorageId = _sids[0] };

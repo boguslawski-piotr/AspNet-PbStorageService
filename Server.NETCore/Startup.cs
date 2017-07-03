@@ -80,13 +80,12 @@ namespace pbXStorage.Server.NETCore
 					return (pcs[0], pcs.Length > 1 ? pcs[1] : "");
 				}
 
-				(string provider, string connectionString) = ParseProviderAndConnectionString("MainDb", $"SQlite;Data Source={serverId}.db");
-				builder.UseDb(provider, connectionString);
+				(string mDbProvider, string mDbConnectionString) = ParseProviderAndConnectionString("MainDb", $"SQlite;Data Source={serverId}.db");
+				(string rDbProvider, string rDbConnectionString) = ParseProviderAndConnectionString("RepositoriesDb", null);
 
-				(provider, connectionString) = ParseProviderAndConnectionString("RepositoriesDb", null);
-				builder.UseRepositoriesDb(provider, connectionString);
-
-				return builder;
+				return builder
+					.UseDb(mDbProvider, mDbConnectionString)
+					.UseRepositoriesDb(rDbProvider, rDbConnectionString);
 			}
 
 			// Add framework services.
@@ -115,7 +114,10 @@ namespace pbXStorage.Server.NETCore
 			IDataProtector protector = applicationServices.GetDataProtector(serverId);
 
 			services.AddSingleton(
-				new Manager(serverId, new SimpleCryptographer2DataProtector(protector))
+				new Manager(serverId, 
+							TimeSpan.FromHours(Configuration.GetValue<int>("ObjectsLifeTime", 12)), 
+							new SimpleCryptographer2DataProtector(protector)
+							)
 			);
 		}
 
@@ -152,7 +154,8 @@ namespace pbXStorage.Server.NETCore
 			// Initialize main db.
 
 			ApplicationDbContext dbContext = app.ApplicationServices.GetService<ApplicationDbContext>();
-			dbContext.Database.EnsureCreated();
+			//dbContext.Database.EnsureCreated();
+			dbContext.Database.Migrate();
 
 			// Initialize pbXStorage.
 

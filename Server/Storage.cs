@@ -18,6 +18,9 @@ namespace pbXStorage.Server
 
 		IAsymmetricCryptographerKeyPair _keys;
 
+		[NonSerialized]
+		public DateTime AccesedOn;
+
 		public Storage(App app, string id)
 		{
 			App = app ?? throw new ArgumentNullException(nameof(app));
@@ -27,6 +30,8 @@ namespace pbXStorage.Server
 			Token = Tools.CreateGuidEx();
 
 			_keys = new RsaCryptographer().GenerateKeyPair();
+
+			AccesedOn = DateTime.Now;
 		}
 
 		public string TokenAndPublicKey
@@ -40,8 +45,6 @@ namespace pbXStorage.Server
 				return $"{signature},{tokenAndPublicKey}";
 			}
 		}
-
-		public string IdForDb => Path.Combine(App.Repository.Id, Id).Replace(Path.DirectorySeparatorChar, '/');
 
 		public string Sign(string data)
 		{
@@ -58,7 +61,9 @@ namespace pbXStorage.Server
 			return Regex.Replace(thingId, "[\\/:*?<>|]", "-");
 		}
 
-		public async Task StoreAsync(IDb db, string thingId, string data)
+		string IdForDb => Path.Combine(App.Repository.Id, Id).Replace(Path.DirectorySeparatorChar, '/');
+
+		public async Task StoreAsync(Context ctx, string thingId, string data)
 		{
 			string[] signatureAndData = data.Split(new char[] { ',' }, 2);
 			string signature = signatureAndData[0];
@@ -73,25 +78,26 @@ namespace pbXStorage.Server
 			DateTime modifiedOn = DateTime.FromBinary(long.Parse(modifiedOnAndData[0]));
 			data = modifiedOnAndData[1];
 
-			await db.StoreThingAsync(IdForDb, thingId, data, modifiedOn.ToUniversalTime()).ConfigureAwait(false);
+			await ctx.RepositoriesDb.StoreThingAsync(IdForDb, PrepareThingId(thingId), data, modifiedOn.ToUniversalTime()).ConfigureAwait(false);
 		}
 
-		public async Task<string> ExistsAsync(IDb db, string thingId)
+		public async Task<string> ExistsAsync(Context ctx, string thingId)
 		{
-			bool exists = await db.ThingExistsAsync(IdForDb, thingId).ConfigureAwait(false);
+			bool exists = await ctx.RepositoriesDb.ThingExistsAsync(IdForDb, PrepareThingId(thingId)).ConfigureAwait(false);
 			return exists ? "YES" : "NO";
 		}
 
-		public async Task<string> GetModifiedOnAsync(IDb db, string thingId)
+		public async Task<string> GetModifiedOnAsync(Context ctx, string thingId)
 		{
-			DateTime modifiedOn = await db.GetThingModifiedOnAsync(IdForDb, thingId).ConfigureAwait(false);
+			DateTime modifiedOn = await ctx.RepositoriesDb.GetThingModifiedOnAsync(IdForDb, PrepareThingId(thingId)).ConfigureAwait(false);
 			return modifiedOn.ToUniversalTime().ToBinary().ToString();
 		}
 
-		public async Task<string> GetACopyAsync(IDb db, string thingId)
+		public async Task<string> GetACopyAsync(Context ctx, string thingId)
 		{
-			string data = await db.GetThingCopyAsync(IdForDb, thingId).ConfigureAwait(false);
-			DateTime modifiedOn = await db.GetThingModifiedOnAsync(IdForDb, thingId).ConfigureAwait(false);
+			thingId = PrepareThingId(thingId);
+			string data = await ctx.RepositoriesDb.GetThingCopyAsync(IdForDb, thingId).ConfigureAwait(false);
+			DateTime modifiedOn = await ctx.RepositoriesDb.GetThingModifiedOnAsync(IdForDb, thingId).ConfigureAwait(false);
 
 			data = $"{modifiedOn.ToUniversalTime().ToBinary().ToString()},{data}";
 
@@ -101,17 +107,17 @@ namespace pbXStorage.Server
 			return $"{signature},{data}";
 		}
 
-		public async Task DiscardAsync(IDb db, string thingId)
+		public async Task DiscardAsync(Context ctx, string thingId)
 		{
-			await db.DiscardThingAsync(IdForDb, thingId).ConfigureAwait(false);
+			await ctx.RepositoriesDb.DiscardThingAsync(IdForDb, PrepareThingId(thingId)).ConfigureAwait(false);
 		}
 
-		public async Task<string> FindIdsAsync(IDb db, string pattern)
+		public async Task<string> FindIdsAsync(Context ctx, string pattern)
 		{
 			if (string.IsNullOrWhiteSpace(pattern))
 				pattern = "";
 
-			IEnumerable<IdInDb> ids = await db.FindThingIdsAsync(IdForDb, pattern).ConfigureAwait(false);
+			IEnumerable<IdInDb> ids = await ctx.RepositoriesDb.FindThingIdsAsync(IdForDb, pattern).ConfigureAwait(false);
 
 			StringBuilder sids = null;
 			foreach (var id in ids)

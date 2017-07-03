@@ -20,7 +20,7 @@ namespace pbXStorage.Server.NETCore.Data
 		{
 			try
 			{
-				if (options.GetExtension<RepositoriesDbOptions>().Provider == null)
+				if (options.GetExtension<RepositoriesDbOptionsExtension>().Provider == null)
 					_repositoriesDb = new DbOnEF(Things, this);
 			}
 			catch(Exception ex)

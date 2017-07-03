@@ -108,7 +108,7 @@ namespace pbXStorage.Server.NETCore.Controllers
 
 			Repository repository = await _manager.GetRepositoryAsync(_context, repositoryId);
 
-			IEnumerable<IdInDb> ids = await repository.FindIdsAsync(_context.RepositoriesDb, "");
+			IEnumerable<IdInDb> ids = await repository.FindIdsAsync(_context, "");
 
 			ViewData["repository"] = repository;
 			ViewData["ids"] = ids;

@@ -17,16 +17,15 @@ namespace pbXStorage.Server.NETCore
 				.Build();
 
 			var host = new WebHostBuilder()
-				.UseConfiguration(config)
                 .UseKestrel()
 				.UseContentRoot(contentRoot)
                 .UseIISIntegration()
+				.UseConfiguration(config)
                 .UseStartup<Startup>()
-                .UseApplicationInsights()
+                //.UseApplicationInsights()
                 .Build();
 
             host.Run();
-			//host.Start();
         }
     }
 }

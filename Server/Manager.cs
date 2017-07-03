@@ -41,14 +41,10 @@ using pbXNet;
 
 namespace pbXStorage.Server
 {
-	public class Context
-	{
-		public IDb RepositoriesDb { get; set; }
-		public ISimpleCryptographer Cryptographer { get; set; }
-	}
-
 	public class Manager
 	{
+		#region Properties
+
 		public string Id { get; set; }
 
 		ConcurrentDictionary<string, Repository> _repositories = new ConcurrentDictionary<string, Repository>();
@@ -61,9 +57,17 @@ namespace pbXStorage.Server
 
 		ISimpleCryptographer _cryptographer { get; set; }
 
-		public Manager(string id, ISimpleCryptographer cryptographer = null, ISerializer serializer = null)
+		TimeSpan _objectsLifeTime;
+
+		#endregion
+
+		#region Constructor
+
+		public Manager(string id, TimeSpan objectsLifeTime, ISimpleCryptographer cryptographer = null, ISerializer serializer = null)
 		{
 			Id = id ?? throw new ArgumentException($"{nameof(Id)} must be valid object.");
+
+			_objectsLifeTime = objectsLifeTime;
 
 			_cryptographer = cryptographer;
 
@@ -71,75 +75,58 @@ namespace pbXStorage.Server
 				_serializer = serializer;
 		}
 
-		public Context CreateContext(IDb repositoriesDb)
-		{
-			repositoriesDb.Cryptographer = _cryptographer;
-			return new Context
-			{
-				RepositoriesDb = repositoriesDb,
-				Cryptographer = _cryptographer,
-			};
-		}
-
 		public async Task InitializeAsync(Context ctx)
 		{
-			await LoadRepositoriesAsync(ctx);
 		}
 
-		#region Repositories
+		#endregion
 
-		const string _repositoriesThingId = "c235e54b577c44418ab0948f299e830876b14f2cc39742f3bc4dd5ae581d1e31";
+		#region GC
 
-		readonly SemaphoreSlim _repositoriesLock = new SemaphoreSlim(1);
+		readonly SemaphoreSlim _gcLock = new SemaphoreSlim(1);
 
-		public async Task LoadRepositoriesAsync(Context ctx)
+		void GCStorages()
 		{
-			await _repositoriesLock.WaitAsync().ConfigureAwait(false);
-			try
+			foreach (var s in _storages.Where((s) => DateTime.Now - s.Value.AccesedOn > _objectsLifeTime))
 			{
-				if (await ctx.RepositoriesDb.ThingExistsAsync(Id, _repositoriesThingId).ConfigureAwait(false))
-				{
-					string d = await ctx.RepositoriesDb.GetThingCopyAsync(Id, _repositoriesThingId).ConfigureAwait(false);
-					if (d != null)
-					{
-						if (ctx.Cryptographer != null)
-							d = ctx.Cryptographer.Decrypt(d);
-
-						d = Obfuscator.DeObfuscate(d);
-
-						_repositories = _serializer.Deserialize<ConcurrentDictionary<string, Repository>>(d);
-
-						foreach (var repository in _repositories.Values)
-							repository.InitializeAfterDeserialize();
-					}
-				}
-
-				Log.I($"{_repositories?.Values.Count} repositories loaded.", this);
-			}
-			catch (Exception ex)
-			{
-				Log.E(ex.Message, this);
-				throw ex;
-			}
-			finally
-			{
-				_repositoriesLock.Release();
+				if (_storages.TryRemove(s.Key, out Storage _))
+					Log.W($"removed storage '{s.Value.App.Token}/{s.Value.Id}' from memory", this);
 			}
 		}
 
-		public async Task SaveRepositoriesAsync(Context ctx)
+		void GCApps()
 		{
-			await _repositoriesLock.WaitAsync().ConfigureAwait(false);
+			foreach (var a in _apps.Where((a) => DateTime.Now - a.Value.AccesedOn > _objectsLifeTime
+												 && !_storages.Values.Any((_storage) => (_storage.App.Token == a.Value.Token)))
+			)
+			{
+				if (_apps.TryRemove(a.Key, out App _))
+					Log.W($"removed app '{a.Value.Repository.Id}/{a.Value.Token}' from memory", this);
+			}
+		}
+
+		void GCRepositories()
+		{
+			foreach (var r in _repositories.Where((r) => DateTime.Now - r.Value.AccesedOn > _objectsLifeTime
+												 && !_apps.Values.Any((_app) => (_app.Repository.Id == r.Value.Id)))
+			)
+			{
+				if (_repositories.TryRemove(r.Key, out Repository _))
+					Log.W($"removed repository '{r.Value.Id}' from memory", this);
+			}
+		}
+
+		async Task GCAsync()
+		{
+			//TimeSpan objectLifeTime = TimeSpan.FromMinutes(1);
+			TimeSpan objectLifeTime = TimeSpan.FromMilliseconds(500);
+
+			await _gcLock.WaitAsync().ConfigureAwait(false);
 			try
 			{
-				string d = _serializer.Serialize(_repositories);
-
-				d = Obfuscator.Obfuscate(d);
-
-				if (ctx.Cryptographer != null)
-					d = ctx.Cryptographer.Encrypt(d);
-
-				await ctx.RepositoriesDb.StoreThingAsync(Id, _repositoriesThingId, d, DateTime.UtcNow).ConfigureAwait(false);
+				GCStorages();
+				GCApps();
+				GCRepositories();
 			}
 			catch (Exception ex)
 			{
@@ -148,19 +135,22 @@ namespace pbXStorage.Server
 			}
 			finally
 			{
-				_repositoriesLock.Release();
+				_gcLock.Release();
 			}
 		}
 
+		#endregion
+
+		#region Repositories
+
 		public async Task<Repository> NewRepositoryAsync(Context ctx, string name)
 		{
+			await GCAsync();
+
 			try
 			{
-				Repository repository = Repository.New(name);
-
+				Repository repository = await Repository.NewAsync(ctx, Id, name);
 				_repositories[repository.Id] = repository;
-
-				await SaveRepositoriesAsync(ctx).ConfigureAwait(false);
 
 				Log.I($"created new repository '{repository.Id}'.", this);
 
@@ -177,7 +167,14 @@ namespace pbXStorage.Server
 		{
 			try
 			{
-				return _repositories[repositoryId];
+				if (!_repositories.TryGetValue(repositoryId, out Repository repository))
+				{
+					repository = await Repository.LoadAsync(ctx, Id, repositoryId);
+					_repositories[repository.Id] = repository;
+				}
+
+				repository.AccesedOn = DateTime.Now;
+				return repository;
 			}
 			catch (Exception ex)
 			{
@@ -190,13 +187,12 @@ namespace pbXStorage.Server
 		{
 			try
 			{
-				await ctx.RepositoriesDb.DiscardAllAsync(repositoryId);
-
-				_repositories.TryRemove(repositoryId, out Repository r);
-
-				await SaveRepositoriesAsync(ctx).ConfigureAwait(false);
+				_repositories.TryRemove(repositoryId, out Repository _);
+				await Repository.RemoveAsync(ctx, Id, repositoryId);
 
 				Log.I($"removed repository '{repositoryId}'.", this);
+
+				await GCAsync();
 			}
 			catch (Exception ex)
 			{
@@ -211,33 +207,38 @@ namespace pbXStorage.Server
 
 		public async Task<string> RegisterAppAsync(Context ctx, string repositoryId, string appPublicKey)
 		{
-			if (_repositories.TryGetValue(repositoryId, out Repository repository))
+			await GCAsync();
+
+			Repository repository = null;
+			try
 			{
-				try
-				{
-					appPublicKey = BODY(appPublicKey);
-
-					App app = _apps.Values.ToList().Find((_app) => (_app.PublicKey == appPublicKey && _app.Repository == repository));
-					if (app == null)
-					{
-						app = new App(this, repository, appPublicKey);
-						_apps[app.Token] = app;
-
-						Log.I($"created new app '{app.Token}' for '{repository.Id}'.", this);
-					}
-
-					if (app != null)
-						return OK(app.Token);
-				}
-				catch (Exception ex)
-				{
-					return ERROR($"1002,{ex.Message}");
-				}
-
-				return ERROR("1001,Failed to register application.");
+				repository = await GetRepositoryAsync(ctx, repositoryId);
+			}
+			catch (Exception)
+			{
+				return ERROR(PbXStorageErrorCode.RepositoryDoesNotExist, "Repository doesn't exist.");
 			}
 
-			return ERROR($"1000,Repository doesn't exist.");
+			try
+			{
+				appPublicKey = FROMBODY(appPublicKey);
+
+				App app = _apps.Values.ToList().Find((_app) => (_app.PublicKey == appPublicKey && _app.Repository.Id == repository.Id));
+				if (app == null)
+				{
+					app = new App(repository, appPublicKey);
+					_apps[app.Token] = app;
+
+					Log.I($"created new app '{repository.Id}/{app.Token}'.", this);
+				}
+
+				app.AccesedOn = DateTime.Now;
+				return OK(app.Token);
+			}
+			catch (Exception ex)
+			{
+				return ERROR(PbXStorageErrorCode.AppRegistrationFailed, ex);
+			}
 		}
 
 		#endregion
@@ -246,35 +247,31 @@ namespace pbXStorage.Server
 
 		public async Task<string> OpenStorageAsync(Context ctx, string appToken, string storageId)
 		{
-			if (_apps.TryGetValue(appToken, out App app))
+			await GCAsync();
+
+			if (!_apps.TryGetValue(appToken, out App app))
+				return ERROR(PbXStorageErrorCode.IncorrectAppToken, "Incorrect application token.");
+
+			try
 			{
-				try
+				Storage storage = _storages.Values.ToList().Find((_storage) => (_storage.App.Token == appToken && _storage.Id == storageId));
+				if (storage == null)
 				{
-					Storage storage = _storages.Values.ToList().Find((_storage) => (_storage.App.Token == appToken && _storage.Id == storageId));
-					if (storage == null)
-					{
-						storage = new Storage(app, storageId);
-						_storages[storage.Token] = storage;
+					storage = new Storage(app, storageId);
+					_storages[storage.Token] = storage;
 
-						Log.I($"created '{storageId}' for app '{app.Token}'.", this);
-					}
-
-					if (storage != null)
-					{
-						Log.I($"opened '{storageId}' for app '{app.Token}'.", this);
-
-						return OK(storage.TokenAndPublicKey);
-					}
+					Log.I($"created '{app.Token}/{storageId}'.", this);
 				}
-				catch (Exception ex)
-				{
-					return ERROR($"2002,{ex.Message}");
-				}
+				else
+					Log.I($"opened '{app.Token}/{storageId}'.", this);
 
-				return ERROR("2001,Failed to create/open storage.");
+				storage.AccesedOn = DateTime.Now;
+				return OK(storage.TokenAndPublicKey);
 			}
-
-			return ERROR($"2000,Incorrect application token.");
+			catch (Exception ex)
+			{
+				return ERROR(PbXStorageErrorCode.OpenStorageFailed, ex);
+			}
 		}
 
 		#endregion
@@ -283,27 +280,25 @@ namespace pbXStorage.Server
 
 		async Task<string> ExecuteInStorage(string storageToken, Func<Storage, Task<string>> action, [CallerMemberName]string callerName = null)
 		{
-			if (_storages.TryGetValue(storageToken, out Storage storage))
-			{
-				try
-				{
-					Task<string> task = action(storage);
-					return await task.ConfigureAwait(false);
-				}
-				catch (Exception ex)
-				{
-					return ERROR($"3001,{ex.Message}", callerName);
-				}
-			}
+			if (!_storages.TryGetValue(storageToken, out Storage storage))
+				return ERROR(PbXStorageErrorCode.IncorrectStorageToken, "Incorrect storage token.", callerName);
 
-			return ERROR($"3000,Incorrect storage token.", callerName);
+			try
+			{
+				Task<string> task = action(storage);
+				return await task.ConfigureAwait(false);
+			}
+			catch (Exception ex)
+			{
+				return ERROR(PbXStorageErrorCode.ThingOperationFailed, ex, callerName);
+			}
 		}
 
 		public async Task<string> StoreThingAsync(Context ctx, string storageToken, string thingId, string data)
 		{
 			return await ExecuteInStorage(storageToken, async (Storage storage) =>
 			{
-				await storage.StoreAsync(ctx.RepositoriesDb, thingId, BODY(data)).ConfigureAwait(false);
+				await storage.StoreAsync(ctx, thingId, FROMBODY(data)).ConfigureAwait(false);
 				return OK();
 			}).ConfigureAwait(false);
 		}
@@ -312,7 +307,7 @@ namespace pbXStorage.Server
 		{
 			return await ExecuteInStorage(storageToken, async (Storage storage) =>
 			{
-				return OK(await storage.ExistsAsync(ctx.RepositoriesDb, thingId).ConfigureAwait(false));
+				return OK(await storage.ExistsAsync(ctx, thingId).ConfigureAwait(false));
 			}).ConfigureAwait(false);
 		}
 
@@ -320,7 +315,7 @@ namespace pbXStorage.Server
 		{
 			return await ExecuteInStorage(storageToken, async (Storage storage) =>
 			{
-				return OK(await storage.GetModifiedOnAsync(ctx.RepositoriesDb, thingId).ConfigureAwait(false));
+				return OK(await storage.GetModifiedOnAsync(ctx, thingId).ConfigureAwait(false));
 			}).ConfigureAwait(false);
 		}
 
@@ -328,7 +323,7 @@ namespace pbXStorage.Server
 		{
 			return await ExecuteInStorage(storageToken, async (Storage storage) =>
 			{
-				return OK(await storage.GetACopyAsync(ctx.RepositoriesDb, thingId).ConfigureAwait(false));
+				return OK(await storage.GetACopyAsync(ctx, thingId).ConfigureAwait(false));
 			}).ConfigureAwait(false);
 		}
 
@@ -336,7 +331,7 @@ namespace pbXStorage.Server
 		{
 			return await ExecuteInStorage(storageToken, async (Storage storage) =>
 			{
-				await storage.DiscardAsync(ctx.RepositoriesDb, thingId).ConfigureAwait(false);
+				await storage.DiscardAsync(ctx, thingId).ConfigureAwait(false);
 				return OK();
 			}).ConfigureAwait(false);
 		}
@@ -345,7 +340,7 @@ namespace pbXStorage.Server
 		{
 			return await ExecuteInStorage(storageToken, async (Storage storage) =>
 			{
-				return OK(await storage.FindIdsAsync(ctx.RepositoriesDb, pattern).ConfigureAwait(false));
+				return OK(await storage.FindIdsAsync(ctx, pattern).ConfigureAwait(false));
 			}).ConfigureAwait(false);
 		}
 
@@ -353,7 +348,18 @@ namespace pbXStorage.Server
 
 		#region Tools
 
-		string BODY(string data)
+		public Context CreateContext(IDb repositoriesDb)
+		{
+			repositoriesDb.Cryptographer = _cryptographer;
+			return new Context
+			{
+				RepositoriesDb = repositoriesDb,
+				Cryptographer = _cryptographer,
+				Serializer = _serializer,
+			};
+		}
+
+		string FROMBODY(string data)
 		{
 			return Obfuscator.DeObfuscate(data);
 		}
@@ -365,10 +371,21 @@ namespace pbXStorage.Server
 			return Obfuscator.Obfuscate(data);
 		}
 
-		string ERROR(string message, [CallerMemberName]string callerName = null)
+		string ERROR(PbXStorageErrorCode error, string message, [CallerMemberName]string callerName = null)
 		{
+			message = $"{(int)error},{message}";
 			Log.E(message, this, callerName);
 			return Obfuscator.Obfuscate($"ERROR,{message}");
+		}
+
+		string ERROR(PbXStorageErrorCode error, Exception ex, [CallerMemberName]string callerName = null)
+		{
+			string message = $"{ex.Message}";
+
+			if (ex.InnerException != null)
+				message += $" {ex.InnerException.Message + (ex.InnerException.Message.EndsWith(".") ? "" : ".")}";
+
+			return ERROR(error, message, callerName);
 		}
 
 		#endregion
