@@ -11,9 +11,9 @@ namespace pbXStorage.Server.NETCore.Data
 	{
 		public DbSet<Thing> Things { get; set; }
 
-		public IDb RepositoriesDb => _repositoriesDb ?? this.GetService<DbOnFileSystem>();
+		public IDb RepositoriesDb => (IDb)_repositoriesDb ?? this.GetService<DbOnFileSystem>();
 
-		IDb _repositoriesDb;
+		DbOnEF _repositoriesDb;
 
 		public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
 			: base(options)
@@ -39,14 +39,8 @@ namespace pbXStorage.Server.NETCore.Data
 			builder.Entity<ApplicationUserRepository>()
 				.HasIndex(c => c.ApplicationUserId);
 
-			builder.Entity<Thing>()
-				.HasKey(t => new { t.StorageId, t.Id });
-			builder.Entity<Thing>()
-				.HasIndex(t => t.StorageId);
-			builder.Entity<Thing>()
-				.HasIndex(t => t.Id);
-			builder.Entity<Thing>()
-				.ToTable("Things");
+			if (_repositoriesDb != null)
+				_repositoriesDb.OnModelCreating(builder, "Things");
 		}
 	}
 }

@@ -29,6 +29,18 @@ namespace pbXStorage.Server
 			_db = db;
 		}
 
+		public virtual void OnModelCreating(ModelBuilder builder, string tableName)
+		{
+			builder.Entity<Thing>()
+				.HasKey(t => new { t.StorageId, t.Id });
+			builder.Entity<Thing>()
+				.HasIndex(t => t.StorageId);
+			builder.Entity<Thing>()
+				.HasIndex(t => t.Id);
+			builder.Entity<Thing>()
+				.ToTable(tableName);
+		}
+
 		public async Task StoreThingAsync(string storageId, string thingId, string data, DateTime modifiedOn)
 		{
 			Thing t = await _things.FindAsync(storageId, thingId);

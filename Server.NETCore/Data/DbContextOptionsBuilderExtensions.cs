@@ -23,7 +23,7 @@ namespace pbXStorage.Server.NETCore.Data
 					break;
 
 				case RepositoriesDbOptionsExtension.SqlServerProvider:
-					builder.UseSqlServer(connectionString);
+					builder.UseSqlServer(connectionString, options => options.EnableRetryOnFailure());
 					break;
 
 				default:
