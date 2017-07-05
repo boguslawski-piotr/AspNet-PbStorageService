@@ -70,7 +70,7 @@ namespace pbXStorage.Server
 			data = signatureAndData[1];
 
 			if (!App.Verify(data, signature))
-				throw new Exception("Incorrect data.");
+				throw new Exception(T.Localized("SOPXS_IncorrectData"));
 
 			data = Decrypt(data);
 

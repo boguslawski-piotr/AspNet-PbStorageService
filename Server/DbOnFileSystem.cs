@@ -32,8 +32,8 @@ namespace pbXStorage.Server
 
 			if (!string.IsNullOrWhiteSpace(storageId))
 			{
-				storageId = storageId.Replace('/', Path.DirectorySeparatorChar);
-				await fs.CreateDirectoryAsync(storageId).ConfigureAwait(false);
+				foreach(var d in storageId.Split('/'))
+					await fs.CreateDirectoryAsync(d).ConfigureAwait(false);
 			}
 
 			return fs;
