@@ -73,7 +73,7 @@ namespace pbXStorage.Server
 		{
 			Thing t = await _things.FindAsync(storageId, thingId);
 			if (t == null)
-				throw new Exception(t.Localized("PXS_ThingNotFound", storageId, thingId));
+				throw new Exception(T.Localized("PXS_ThingNotFound", storageId, thingId));
 
 			return t.ModifiedOn;
 		}
@@ -82,7 +82,7 @@ namespace pbXStorage.Server
 		{
 			Thing t = await _things.FindAsync(storageId, thingId);
 			if (t == null)
-				throw new Exception(t.Localized("PXS_ThingNotFound", storageId, thingId));
+				throw new Exception(T.Localized("PXS_ThingNotFound", storageId, thingId));
 
 			string data = t.Data;
 

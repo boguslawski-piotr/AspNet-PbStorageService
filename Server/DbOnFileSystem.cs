@@ -21,7 +21,7 @@ namespace pbXStorage.Server
 
 		public DbOnFileSystem(string directory = null)
 		{
-			_fs = DeviceFileSystem.New(DeviceFileSystemRoot.UserDefined, directory ?? "~");
+			_fs = DeviceFileSystem.New(DeviceFileSystem.RootType.UserDefined, directory ?? "~");
 
 			Log.I($"Data will be stored in directory: '{directory}'.", this);
 		}
