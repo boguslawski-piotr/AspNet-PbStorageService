@@ -99,7 +99,7 @@ namespace pbXStorage.Server
 			string rc = await ExecuteInLock(storageId, thingId, async (IFileSystem fs) =>
 			{
 				if (!await fs.FileExistsAsync(thingId).ConfigureAwait(false))
-					throw new Exception($"'{storageId}/{thingId}' was not found.");
+					throw new Exception(T.Localized("PXS_ThingNotFound", storageId, thingId));
 
 				DateTime modifiedOn = await fs.GetFileModifiedOnAsync(thingId).ConfigureAwait(false);
 				return modifiedOn.ToBinary().ToString();
@@ -114,7 +114,7 @@ namespace pbXStorage.Server
 			return await ExecuteInLock(storageId, thingId, async (IFileSystem fs) =>
 			{
 				if (!await fs.FileExistsAsync(thingId).ConfigureAwait(false))
-					throw new Exception($"'{storageId}/{thingId}' was not found.");
+					throw new Exception(T.Localized("PXS_ThingNotFound", storageId, thingId));
 
 				string data = await fs.ReadTextAsync(thingId).ConfigureAwait(false);
 

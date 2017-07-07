@@ -288,6 +288,10 @@ namespace pbXStorage.Server
 				Task<string> task = action(storage);
 				return await task.ConfigureAwait(false);
 			}
+			catch (StorageThingNotFoundException ex)
+			{
+				return ERROR(PbXStorageErrorCode.ThingNotFound, ex, callerName);
+			}
 			catch (Exception ex)
 			{
 				return ERROR(PbXStorageErrorCode.ThingOperationFailed, ex, callerName);

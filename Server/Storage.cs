@@ -89,13 +89,22 @@ namespace pbXStorage.Server
 
 		public async Task<string> GetModifiedOnAsync(Context ctx, string thingId)
 		{
-			DateTime modifiedOn = await ctx.RepositoriesDb.GetThingModifiedOnAsync(IdForDb, PrepareThingId(thingId)).ConfigureAwait(false);
+			thingId = PrepareThingId(thingId);
+
+			if(!await ctx.RepositoriesDb.ThingExistsAsync(IdForDb, thingId).ConfigureAwait(false))
+				throw new StorageThingNotFoundException(thingId);
+
+			DateTime modifiedOn = await ctx.RepositoriesDb.GetThingModifiedOnAsync(IdForDb, thingId).ConfigureAwait(false);
 			return modifiedOn.ToUniversalTime().ToBinary().ToString();
 		}
 
 		public async Task<string> GetACopyAsync(Context ctx, string thingId)
 		{
 			thingId = PrepareThingId(thingId);
+
+			if (!await ctx.RepositoriesDb.ThingExistsAsync(IdForDb, thingId).ConfigureAwait(false))
+				throw new StorageThingNotFoundException(thingId);
+
 			string data = await ctx.RepositoriesDb.GetThingCopyAsync(IdForDb, thingId).ConfigureAwait(false);
 			DateTime modifiedOn = await ctx.RepositoriesDb.GetThingModifiedOnAsync(IdForDb, thingId).ConfigureAwait(false);
 
