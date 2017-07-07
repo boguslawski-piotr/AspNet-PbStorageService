@@ -380,7 +380,7 @@ namespace pbXStorage.Server
 
 		string ERROR(PbXStorageErrorCode error, Exception ex, [CallerMemberName]string callerName = null)
 		{
-			string message = $"{ex.Message}";
+			string message = ex.Message;
 
 			if (ex.InnerException != null)
 				message += $" {ex.InnerException.Message + (ex.InnerException.Message.EndsWith(".") ? "" : ".")}";
