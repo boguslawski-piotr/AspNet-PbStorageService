@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -19,7 +20,6 @@ namespace pbXStorage.Server.NETCore.Controllers
     {
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
-        private readonly string _externalCookieScheme;
         private readonly IEmailSender _emailSender;
         private readonly ISmsSender _smsSender;
         private readonly ILogger _logger;
@@ -27,14 +27,12 @@ namespace pbXStorage.Server.NETCore.Controllers
         public ManageController(
           UserManager<ApplicationUser> userManager,
           SignInManager<ApplicationUser> signInManager,
-          IOptions<IdentityCookieOptions> identityCookieOptions,
           IEmailSender emailSender,
           ISmsSender smsSender,
           ILoggerFactory loggerFactory)
         {
             _userManager = userManager;
             _signInManager = signInManager;
-            _externalCookieScheme = identityCookieOptions.Value.ExternalCookieAuthenticationScheme;
             _emailSender = emailSender;
             _smsSender = smsSender;
             _logger = loggerFactory.CreateLogger<ManageController>();
@@ -281,37 +279,39 @@ namespace pbXStorage.Server.NETCore.Controllers
         [HttpGet]
         public async Task<IActionResult> ManageLogins(ManageMessageId? message = null)
         {
-            ViewData["StatusMessage"] =
-                message == ManageMessageId.RemoveLoginSuccess ? "The external login was removed."
-                : message == ManageMessageId.AddLoginSuccess ? "The external login was added."
-                : message == ManageMessageId.Error ? "An error has occurred."
-                : "";
-            var user = await GetCurrentUserAsync();
-            if (user == null)
-            {
-                return View("Error");
-            }
-            var userLogins = await _userManager.GetLoginsAsync(user);
-            var otherLogins = _signInManager.GetExternalAuthenticationSchemes().Where(auth => userLogins.All(ul => auth.AuthenticationScheme != ul.LoginProvider)).ToList();
-            ViewData["ShowRemoveButton"] = user.PasswordHash != null || userLogins.Count > 1;
-            return View(new ManageLoginsViewModel
-            {
-                CurrentLogins = userLogins,
-                OtherLogins = otherLogins
-            });
-        }
+			ViewData["StatusMessage"] =
+				message == ManageMessageId.RemoveLoginSuccess ? "The external login was removed."
+				: message == ManageMessageId.AddLoginSuccess ? "The external login was added."
+				: message == ManageMessageId.Error ? "An error has occurred."
+				: "";
+			var user = await GetCurrentUserAsync();
+			if (user == null)
+			{
+				return View("Error");
+			}
+			var userLogins = await _userManager.GetLoginsAsync(user);
+			var schemes = await _signInManager.GetExternalAuthenticationSchemesAsync();
+			var otherLogins = schemes.Where(auth => userLogins.All(ul => auth.Name != ul.LoginProvider)).ToList();
+			ViewData["ShowRemoveButton"] = user.PasswordHash != null || userLogins.Count > 1;
+			return View(new ManageLoginsViewModel
+			{
+				CurrentLogins = userLogins,
+				OtherLogins = otherLogins
+			});
 
-        //
-        // POST: /Manage/LinkLogin
-        [HttpPost]
+		}
+
+		//
+		// POST: /Manage/LinkLogin
+		[HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> LinkLogin(string provider)
         {
             // Clear the existing external cookie to ensure a clean login process
-            await HttpContext.Authentication.SignOutAsync(_externalCookieScheme);
+			await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
 
-            // Request a redirect to the external login provider to link a login for the current user
-            var redirectUrl = Url.Action(nameof(LinkLoginCallback), "Manage");
+			// Request a redirect to the external login provider to link a login for the current user
+			var redirectUrl = Url.Action(nameof(LinkLoginCallback), "Manage");
             var properties = _signInManager.ConfigureExternalAuthenticationProperties(provider, redirectUrl, _userManager.GetUserId(User));
             return Challenge(properties, provider);
         }
@@ -337,9 +337,9 @@ namespace pbXStorage.Server.NETCore.Controllers
             {
                 message = ManageMessageId.AddLoginSuccess;
                 // Clear the existing external cookie to ensure a clean login process
-                await HttpContext.Authentication.SignOutAsync(_externalCookieScheme);
-            }
-            return RedirectToAction(nameof(ManageLogins), new { Message = message });
+				await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
+			}
+			return RedirectToAction(nameof(ManageLogins), new { Message = message });
         }
 
         #region Helpers

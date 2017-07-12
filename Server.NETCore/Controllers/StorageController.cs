@@ -1,6 +1,9 @@
 ﻿using System.Threading.Tasks;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Mvc;
+using pbXNet;
 using pbXStorage.Server.NETCore.Data;
+using pbXStorage.Server.NETCore.Services;
 
 namespace pbXStorage.Server.NETCore.Controllers
 {
@@ -10,10 +13,15 @@ namespace pbXStorage.Server.NETCore.Controllers
 		readonly Manager _manager;
 		readonly Context _context;
 
-		public StorageController(Manager manager, ApplicationDbContext dbContext)
+		public StorageController(
+			Manager manager,
+			ContextBuilder contextBuilder,
+			IDataProtectionProvider dataProtectionProvider,
+			ISerializer serializer,
+			RepositoriesDb repositoriesDb)
 		{
 			_manager = manager;
-			_context = _manager.CreateContext(dbContext.RepositoriesDb);
+			_context = contextBuilder.Build(repositoriesDb, dataProtectionProvider, serializer);
 		}
 
 		[HttpPost("registerapp/{repositoryId}")]

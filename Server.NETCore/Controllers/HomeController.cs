@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using pbXNet;
 using pbXStorage.Server.NETCore.Data;
+using pbXStorage.Server.NETCore.Services;
 
 namespace pbXStorage.Server.NETCore.Controllers
 {
@@ -14,19 +15,23 @@ namespace pbXStorage.Server.NETCore.Controllers
     {
 		readonly Manager _manager;
 		readonly Context _context;
-		readonly ApplicationDbContext _dbContext;
+		readonly UsersDb _usersDb;
 		readonly UserManager<ApplicationUser> _userManager;
 		readonly SignInManager<ApplicationUser> _signInManager;
 
 		public HomeController(
-			Manager manager, 
-			ApplicationDbContext dbContext,
+			Manager manager,
+			ContextBuilder contextBuilder,
+			IDataProtectionProvider dataProtectionProvider,
+			ISerializer serializer,
+			UsersDb usersDb,
+			RepositoriesDb repositoriesDb,
 			UserManager<ApplicationUser> userManager,
 			SignInManager<ApplicationUser> signInManager)
 		{
 			_manager = manager;
-			_context = _manager.CreateContext(dbContext.RepositoriesDb);
-			_dbContext = dbContext;
+			_context = contextBuilder.Build(repositoriesDb, dataProtectionProvider, serializer);
+			_usersDb = usersDb;
 			_userManager = userManager;
 			_signInManager = signInManager;
 		}
@@ -54,11 +59,11 @@ namespace pbXStorage.Server.NETCore.Controllers
 			return View();
         }
 
-		public async Task<IActionResult> Repositories(string repositoryId)
+		public async Task<IActionResult> Repositories(string error)
 		{
 			ApplicationUser user = await CheckAndGetUserAsync();
 
-			await _dbContext.Entry(user)
+			await _usersDb.Entry(user)
 				.Collection(nameof(ApplicationUser.Repositories))
 				.LoadAsync();
 
@@ -73,19 +78,26 @@ namespace pbXStorage.Server.NETCore.Controllers
 				catch (Exception) { }
 			}
 
+			ViewData["error"] = error;
 			ViewData["repositories"] = repositories;
-			ViewData["repositoryWithIDPK"] = repositoryId;
 
 			return View();
 		}
 
+		[HttpPost]
+		[ValidateAntiForgeryToken]
 		public async Task<IActionResult> NewRepository(string name)
 		{
 			ApplicationUser user = await CheckAndGetUserAsync();
 
+			if (string.IsNullOrWhiteSpace(name))
+			{
+				return RedirectToAction(nameof(Repositories), new { error = "You can not create a repository without a name." });
+			}
+
 			Repository repository = await _manager.NewRepositoryAsync(_context, name);
 
-			await _dbContext.Entry(user)
+			await _usersDb.Entry(user)
 				.Collection(nameof(ApplicationUser.Repositories))
 				.LoadAsync();
 
@@ -97,11 +109,14 @@ namespace pbXStorage.Server.NETCore.Controllers
 				}
 			);
 
-			await _dbContext.SaveChangesAsync();
+			await _usersDb.SaveChangesAsync();
 
+			ViewData["error"] = null;
 			return RedirectToAction(nameof(HomeController.Repositories));
 		}
 
+		[HttpPost]
+		[ValidateAntiForgeryToken]
 		public async Task<IActionResult> Repository(string repositoryId)
 		{
 			ApplicationUser user = await CheckAndGetUserAsync();
@@ -116,19 +131,21 @@ namespace pbXStorage.Server.NETCore.Controllers
 			return View();
 		}
 
+		[HttpPost]
+		[ValidateAntiForgeryToken]
 		public async Task<IActionResult> RemoveRepository(string repositoryId)
 		{
 			ApplicationUser user = await CheckAndGetUserAsync();
 
 			await _manager.RemoveRepositoryAsync(_context, repositoryId);
 
-			await _dbContext.Entry(user)
+			await _usersDb.Entry(user)
 				.Collection(nameof(ApplicationUser.Repositories))
 				.LoadAsync();
 
 			user.Repositories.RemoveAll((r) => r.RepositoryId == repositoryId);
 
-			await _dbContext.SaveChangesAsync();
+			await _usersDb.SaveChangesAsync();
 
 			return RedirectToAction(nameof(HomeController.Repositories));
 		}

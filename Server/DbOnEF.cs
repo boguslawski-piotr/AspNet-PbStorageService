@@ -16,20 +16,26 @@ namespace pbXStorage.Server
 		public DateTime ModifiedOn { get; set; }
 	}
 
-	public class DbOnEF : IDb
+	public class DbOnEF : DbContext, IDb
 	{
-		public ISimpleCryptographer Cryptographer { get; set; }
+		public DbSet<Thing> Things { get; set; }
 
-		DbSet<Thing> _things;
-		DbContext _db;
+		public DbOnEF() 
+			: base()
+		{ }
 
-		public DbOnEF(DbSet<Thing> things, DbContext db)
+		public DbOnEF(DbContextOptions<DbOnEF> options)
+			: base(options)
 		{
-			_things = things;
-			_db = db;
 		}
 
-		public virtual void OnModelCreating(ModelBuilder builder, string tableName)
+		public async Task CreateAsync()
+		{
+			await Database.EnsureCreatedAsync();
+			//Database.Migrate();
+		}
+
+		protected override void OnModelCreating(ModelBuilder builder)
 		{
 			builder.Entity<Thing>()
 				.HasKey(t => new { t.StorageId, t.Id });
@@ -37,13 +43,11 @@ namespace pbXStorage.Server
 				.HasIndex(t => t.StorageId);
 			builder.Entity<Thing>()
 				.HasIndex(t => t.Id);
-			builder.Entity<Thing>()
-				.ToTable(tableName);
 		}
 
-		public async Task StoreThingAsync(string storageId, string thingId, string data, DateTime modifiedOn)
+		public async Task StoreThingAsync(string storageId, string thingId, string data, DateTime modifiedOn, ISimpleCryptographer cryptographer = null)
 		{
-			Thing t = await _things.FindAsync(storageId, thingId);
+			Thing t = await Things.FindAsync(storageId, thingId);
 			if (t == null)
 			{
 				t = new Thing
@@ -52,53 +56,53 @@ namespace pbXStorage.Server
 					Id = thingId,
 				};
 
-				_things.Add(t);
+				Things.Add(t);
 			}
 
-			if (Cryptographer != null)
-				data = Cryptographer.Encrypt(data);
+			if (cryptographer != null)
+				data = cryptographer.Encrypt(data);
 
 			t.Data = data;
 			t.ModifiedOn = modifiedOn;
 
-			await _db.SaveChangesAsync();
+			await SaveChangesAsync();
 		}
 
 		public async Task<bool> ThingExistsAsync(string storageId, string thingId)
 		{
-			return await _things.FindAsync(storageId, thingId) != null;
+			return await Things.FindAsync(storageId, thingId) != null;
 		}
 
 		public async Task<DateTime> GetThingModifiedOnAsync(string storageId, string thingId)
 		{
-			Thing t = await _things.FindAsync(storageId, thingId);
+			Thing t = await Things.FindAsync(storageId, thingId);
 			if (t == null)
 				throw new Exception(T.Localized("PXS_ThingNotFound", storageId, thingId));
 
 			return t.ModifiedOn;
 		}
 
-		public async Task<string> GetThingCopyAsync(string storageId, string thingId)
+		public async Task<string> GetThingCopyAsync(string storageId, string thingId, ISimpleCryptographer cryptographer = null)
 		{
-			Thing t = await _things.FindAsync(storageId, thingId);
+			Thing t = await Things.FindAsync(storageId, thingId);
 			if (t == null)
 				throw new Exception(T.Localized("PXS_ThingNotFound", storageId, thingId));
 
 			string data = t.Data;
 
-			if (Cryptographer != null)
-				data = Cryptographer.Decrypt(data);
+			if (cryptographer != null)
+				data = cryptographer.Decrypt(data);
 
 			return data;
 		}
 
 		public async Task DiscardThingAsync(string storageId, string thingId)
 		{
-			Thing t = await _things.FindAsync(storageId, thingId);
+			Thing t = await Things.FindAsync(storageId, thingId);
 			if (t != null)
 			{
-				_things.Remove(t);
-				await _db.SaveChangesAsync();
+				Things.Remove(t);
+				await SaveChangesAsync();
 			}
 		}
 
@@ -107,10 +111,12 @@ namespace pbXStorage.Server
 			IEnumerable<Thing> ts = null;
 
 			if (string.IsNullOrWhiteSpace(pattern))
-				ts = _things.AsNoTracking()
+				ts = Things
+					.AsNoTracking()
 					.Where((_t) => _t.StorageId == storageId);
 			else
-				ts = _things.AsNoTracking()
+				ts = Things
+					.AsNoTracking()
 					.Where((_t) =>
 						_t.StorageId == storageId &&
 						Regex.IsMatch(_t.Id, pattern)
@@ -122,11 +128,11 @@ namespace pbXStorage.Server
 		IEnumerable<Thing> FindAllIds(string storageId, string pattern)
 		{
 			if (string.IsNullOrWhiteSpace(pattern))
-				return _things
+				return Things
 					.AsNoTracking()
 					.Where((_t) => _t.StorageId.StartsWith(storageId));
 
-			return _things
+			return Things
 				.AsNoTracking()
 				.Where((_t) =>
 					_t.StorageId.StartsWith(storageId) &&
@@ -137,8 +143,8 @@ namespace pbXStorage.Server
 		public async Task DiscardAllAsync(string storageId)
 		{
 			IEnumerable<Thing> ts = FindAllIds(storageId, "");
-			_things.RemoveRange(ts);
-			await _db.SaveChangesAsync();
+			Things.RemoveRange(ts);
+			await SaveChangesAsync();
 		}
 
 		public async Task<IEnumerable<IdInDb>> FindAllIdsAsync(string storageId, string pattern)

@@ -78,7 +78,7 @@ namespace pbXStorage.Server
 			DateTime modifiedOn = DateTime.FromBinary(long.Parse(modifiedOnAndData[0]));
 			data = modifiedOnAndData[1];
 
-			await ctx.RepositoriesDb.StoreThingAsync(IdForDb, PrepareThingId(thingId), data, modifiedOn.ToUniversalTime()).ConfigureAwait(false);
+			await ctx.RepositoriesDb.StoreThingAsync(IdForDb, PrepareThingId(thingId), data, modifiedOn.ToUniversalTime(), ctx.Cryptographer).ConfigureAwait(false);
 		}
 
 		public async Task<string> ExistsAsync(Context ctx, string thingId)
@@ -105,7 +105,7 @@ namespace pbXStorage.Server
 			if (!await ctx.RepositoriesDb.ThingExistsAsync(IdForDb, thingId).ConfigureAwait(false))
 				throw new StorageThingNotFoundException(thingId);
 
-			string data = await ctx.RepositoriesDb.GetThingCopyAsync(IdForDb, thingId).ConfigureAwait(false);
+			string data = await ctx.RepositoriesDb.GetThingCopyAsync(IdForDb, thingId, ctx.Cryptographer).ConfigureAwait(false);
 			DateTime modifiedOn = await ctx.RepositoriesDb.GetThingModifiedOnAsync(IdForDb, thingId).ConfigureAwait(false);
 
 			data = $"{modifiedOn.ToUniversalTime().ToBinary().ToString()},{data}";

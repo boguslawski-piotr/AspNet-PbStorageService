@@ -1,3 +1,6 @@
 {
-	"urls": "http://*:23456;https://*:23457",
+	"httpAddress": "Any",
+	"httpPort": 23456,
+	"httpsAddress": "Any",
+	"httpsPort": 23457,
 }

@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
@@ -21,37 +22,14 @@ namespace pbXStorage.Server.NETCore
 {
 	public class Startup
 	{
-		public IConfigurationRoot Configuration { get; }
+		IHostingEnvironment HosttingEnvironment { get; }
 
-		IHostingEnvironment _hosttingEnvironment;
+		IConfiguration Configuration { get; }
 
-		public Startup(IHostingEnvironment env, ILoggerFactory loggerFactory)
+		public Startup(IHostingEnvironment env, IConfiguration configuration)
 		{
-			_hosttingEnvironment = env;
-
-			var builder = new ConfigurationBuilder()
-				.SetBasePath(env.ContentRootPath)
-				.AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
-				.AddJsonFile($"appsettings.{env.EnvironmentName}.json", optional: true);
-
-			//if (env.IsDevelopment())
-			//{
-			//    // For more details on using the user secret store see https://go.microsoft.com/fwlink/?LinkID=532709
-			//    builder.AddUserSecrets<Startup>();
-			//}
-
-			builder.AddEnvironmentVariables();
-			Configuration = builder.Build();
-
-			// Create ASP.NET standard loggers.
-
-			loggerFactory.AddConsole(Configuration.GetSection("Logging"));
-			loggerFactory.AddDebug();
-
-			// Create bridge from pbXNet logging system to ASP.NET logging system.
-
-			Microsoft.Extensions.Logging.ILogger logger = loggerFactory.CreateLogger("pbXStorage.Server");
-			Log.AddLogger(new ILogger2MicrosoftILogger(logger));
+			HosttingEnvironment = env;
+			Configuration = configuration;
 		}
 
 		public void ConfigureServices(IServiceCollection services)
@@ -60,11 +38,11 @@ namespace pbXStorage.Server.NETCore
 
 			string serverId = Configuration.GetValue<string>("ServerId");
 
-			DbContextOptionsBuilder ConfigureDbs(DbContextOptionsBuilder builder)
+			DbContextOptionsBuilder ConfigureDbs(DbContextOptionsBuilder builder, string dbName, Provider[] unsupportedProviders = null)
 			{
-				(string, string) ParseProviderAndConnectionString(string entryName, string defaultValue)
+				(string, string) ParseProviderAndConnectionString(string defaultValue)
 				{
-					string v = Configuration.GetValue<string>(entryName, null);
+					string v = Configuration.GetValue<string>(dbName, null);
 					if (string.IsNullOrWhiteSpace(v))
 						v = defaultValue;
 					if (string.IsNullOrWhiteSpace(v))
@@ -73,29 +51,36 @@ namespace pbXStorage.Server.NETCore
 					string[] pcs =
 						Environment.ExpandEnvironmentVariables(v)
 						.Replace("%ServerId%", serverId)
-						.Replace("%ContentRootPath%", _hosttingEnvironment.ContentRootPath)
+						.Replace("%ContentRootPath%", HosttingEnvironment.ContentRootPath)
 						.Replace('/', Path.DirectorySeparatorChar)
 						.Split(new char[] { ';' }, 2);
 
 					return (pcs[0], pcs.Length > 1 ? pcs[1] : "");
 				}
 
-				(string mDbProvider, string mDbConnectionString) = ParseProviderAndConnectionString("MainDb", $"SQlite;Data Source={serverId}.db");
-				(string rDbProvider, string rDbConnectionString) = ParseProviderAndConnectionString("RepositoriesDb", null);
+				(string provider, string connectionString) = ParseProviderAndConnectionString($"SQlite;Data Source={serverId}-{dbName}.db");
 
 				return builder
-					.UseDb(mDbProvider, mDbConnectionString)
-					.UseRepositoriesDb(rDbProvider, rDbConnectionString);
+					.UseDb(provider, connectionString, dbName, unsupportedProviders);
 			}
+
+			// Add databases.
+
+			services.AddDbContext<UsersDb>(
+				builder => ConfigureDbs(builder, "UsersDb", new Provider[] { Provider.DbOnFileSystem })
+			);
+
+			services.AddDbContext<RepositoriesDb>(
+				builder => ConfigureDbs(builder, "RepositoriesDb")
+			);
 
 			// Add framework services.
 
-			services.AddDbContext<ApplicationDbContext>(
-				(builder) => ConfigureDbs(builder)
-			);
-
-			services.AddIdentity<ApplicationUser, IdentityRole>()
-				.AddEntityFrameworkStores<ApplicationDbContext>()
+			services.AddIdentity<ApplicationUser, IdentityRole>(config =>
+				{
+					//config.SignIn.RequireConfirmedEmail = true;
+				})
+				.AddEntityFrameworkStores<UsersDb>()
 				.AddDefaultTokenProviders();
 
 			services.AddMvc();
@@ -105,20 +90,18 @@ namespace pbXStorage.Server.NETCore
 			// Add other services.
 
 			services.AddTransient<IEmailSender, AuthMessageSender>();
+
 			services.AddTransient<ISmsSender, AuthMessageSender>();
+
+			//services.Configure<AuthMessageSenderOptions>(Configuration);
+
+			services.AddSingleton<ISerializer>(new NewtonsoftJsonSerializer());
+
+			services.AddSingleton(new ContextBuilder(serverId));
 
 			// Add pbXStorage manager.
 
-			IServiceProvider applicationServices = services.BuildServiceProvider();
-
-			IDataProtector protector = applicationServices.GetDataProtector(serverId);
-
-			services.AddSingleton(
-				new Manager(serverId, 
-							TimeSpan.FromHours(Configuration.GetValue<int>("ObjectsLifeTime", 12)), 
-							new SimpleCryptographer2DataProtector(protector)
-							)
-			);
+			services.AddSingleton(new Manager(serverId, TimeSpan.FromHours(Configuration.GetValue<int>("ObjectsLifeTime", 12))));
 		}
 
 		public async void Configure(IApplicationBuilder app, IHostingEnvironment env, ILoggerFactory loggerFactory, Manager manager)
@@ -140,7 +123,7 @@ namespace pbXStorage.Server.NETCore
 
 			app.UseStaticFiles();
 
-			app.UseIdentity();
+			app.UseAuthentication(); 
 
 			// Add external authentication middleware here. To configure them please see https://go.microsoft.com/fwlink/?LinkID=532715
 
@@ -151,19 +134,13 @@ namespace pbXStorage.Server.NETCore
 					template: "{controller=Home}/{action=Index}/{id?}");
 			});
 
-			// Initialize main db.
+			// Initialize dbs.
 
-			ApplicationDbContext dbContext = app.ApplicationServices.GetService<ApplicationDbContext>();
-			//dbContext.Database.EnsureCreated();
-			dbContext.Database.Migrate();
+			UsersDb usersDb = app.ApplicationServices.GetService<UsersDb>();
+			usersDb.Create();
 
-			// Initialize pbXStorage.
-
-			await manager.InitializeAsync(
-				manager.CreateContext(
-					dbContext.RepositoriesDb
-				)
-			);
+			RepositoriesDb repositoriesDb = app.ApplicationServices.GetService<RepositoriesDb>();
+			await repositoriesDb.CreateAsync();
 		}
 	}
 }

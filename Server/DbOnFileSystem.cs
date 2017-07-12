@@ -13,17 +13,19 @@ namespace pbXStorage.Server
 {
 	public class DbOnFileSystem : IDb
 	{
-		public ISimpleCryptographer Cryptographer { get; set; }
-
 		IFileSystem _fs;
 
 		ConcurrentDictionary<string, SemaphoreSlim> _locks = new ConcurrentDictionary<string, SemaphoreSlim>();
 
-		public DbOnFileSystem(string directory = null)
+		public DbOnFileSystem(string directory)
 		{
 			_fs = DeviceFileSystem.New(DeviceFileSystem.RootType.UserDefined, directory ?? "~");
 
 			Log.I($"Data will be stored in directory: '{directory}'.", this);
+		}
+
+		public async Task CreateAsync()
+		{
 		}
 
 		async Task<IFileSystem> GetFs(string storageId)
@@ -32,7 +34,7 @@ namespace pbXStorage.Server
 
 			if (!string.IsNullOrWhiteSpace(storageId))
 			{
-				foreach(var d in storageId.Split('/'))
+				foreach (var d in storageId.Split('/'))
 					await fs.CreateDirectoryAsync(d).ConfigureAwait(false);
 			}
 
@@ -68,12 +70,12 @@ namespace pbXStorage.Server
 			}
 		}
 
-		public async Task StoreThingAsync(string storageId, string thingId, string data, DateTime modifiedOn)
+		public async Task StoreThingAsync(string storageId, string thingId, string data, DateTime modifiedOn, ISimpleCryptographer cryptographer = null)
 		{
 			await ExecuteInLock(storageId, thingId, async (IFileSystem fs) =>
 			{
-				if (Cryptographer != null)
-					data = Cryptographer.Encrypt(data);
+				if (cryptographer != null)
+					data = cryptographer.Encrypt(data);
 
 				await fs.WriteTextAsync(thingId, data).ConfigureAwait(false);
 				await fs.SetFileModifiedOnAsync(thingId, modifiedOn).ConfigureAwait(false);
@@ -109,7 +111,7 @@ namespace pbXStorage.Server
 			return DateTime.FromBinary(long.Parse(rc));
 		}
 
-		public async Task<string> GetThingCopyAsync(string storageId, string thingId)
+		public async Task<string> GetThingCopyAsync(string storageId, string thingId, ISimpleCryptographer cryptographer = null)
 		{
 			return await ExecuteInLock(storageId, thingId, async (IFileSystem fs) =>
 			{
@@ -118,8 +120,8 @@ namespace pbXStorage.Server
 
 				string data = await fs.ReadTextAsync(thingId).ConfigureAwait(false);
 
-				if (Cryptographer != null)
-					data = Cryptographer.Decrypt(data);
+				if (cryptographer != null)
+					data = cryptographer.Decrypt(data);
 
 				return data;
 			})

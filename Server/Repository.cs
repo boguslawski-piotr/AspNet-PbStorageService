@@ -52,7 +52,7 @@ namespace pbXStorage.Server
 			if (ctx.Cryptographer != null)
 				d = ctx.Cryptographer.Encrypt(d);
 
-			await ctx.RepositoriesDb.StoreThingAsync(storageId, repository.Id, d, DateTime.UtcNow).ConfigureAwait(false);
+			await ctx.RepositoriesDb.StoreThingAsync(storageId, repository.Id, d, DateTime.UtcNow, ctx.Cryptographer).ConfigureAwait(false);
 
 			repository.AccesedOn = DateTime.Now;
 			return repository;
@@ -60,7 +60,7 @@ namespace pbXStorage.Server
 
 		public static async Task<Repository> LoadAsync(Context ctx, string storageId, string id)
 		{
-			string d = await ctx.RepositoriesDb.GetThingCopyAsync(storageId, id).ConfigureAwait(false);
+			string d = await ctx.RepositoriesDb.GetThingCopyAsync(storageId, id, ctx.Cryptographer).ConfigureAwait(false);
 
 			if (ctx.Cryptographer != null)
 				d = ctx.Cryptographer.Decrypt(d);

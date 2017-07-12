@@ -3,12 +3,13 @@
     ViewData["Title"] = "Register";
 }
 
-<h2>@ViewData["Title"].</h2>
-<h3>Associate your @ViewData["LoginProvider"] account.</h3>
+<h2>@ViewData["Title"]</h2>
+<hr />
 
 <form asp-controller="Account" asp-action="ExternalLoginConfirmation" asp-route-returnurl="@ViewData["ReturnUrl"]" method="post" class="form-horizontal">
-    <h4>Association Form</h4>
-    <hr />
+	<h4>Associate your @ViewData["LoginProvider"] account.</h4>
+    <br />
+
     <div asp-validation-summary="All" class="text-danger"></div>
 
     <p class="text-info">
@@ -16,6 +17,7 @@
         Please enter an email address for this site below and click the Register button to finish
         logging in.
     </p>
+
     <div class="form-group">
         <label asp-for="Email" class="col-md-2 control-label"></label>
         <div class="col-md-10">

@@ -7,11 +7,11 @@ using pbXNet;
 
 namespace pbXStorage.Server.NETCore
 {
-	class SimpleCryptographer2DataProtector : ISimpleCryptographer
+	class DataProtectorCryptographer : ISimpleCryptographer
 	{
 		IDataProtector _protector;
 
-		public SimpleCryptographer2DataProtector(IDataProtector protector)
+		public DataProtectorCryptographer(IDataProtector protector)
 		{
 			_protector = protector;
 		}

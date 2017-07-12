@@ -13,8 +13,8 @@ namespace Test.NETStd
 		{
 			ApiUri = new Uri("http://10.211.55.3:23456/api/storage/"),
 			AppKeys = new RsaCryptographer().GenerateKeyPair(),
-			RepositoryId = "9ee5df5824094f8199f1ebdc6938ab79636346268348544669",
-			RepositoryPublicKey = new RsaKeyPair(null, "FY63EQQxDAMruhk6kVRI239Jr88QLBb4vg8QAPD7ojhTOmL5bEdJ8wHoRGNdlDoxqtu691wR3VhrZ4U8QsMzwnDKxbL2ovU1SLIM1tGj8LpwQZOkScjRZF/AcpcectNK99PFbM8AdJMg4W/aqSQH0lqcqIOXAKIR6vmuzKOjezwhi62i0N4LtqnuSOW3k7E7krRewc73JLNfwxuthqBSIvf7fg=="),
+			RepositoryId = "cf93f9c5c2b24eea8da38d9e3368a874636353706652643641",
+			RepositoryPublicKey = new RsaKeyPair(null, "FdDHbQRBDADBiBagN0+aYf4h6ZRBV3/fBwgA+H2lrXElAsT3IFbwuXrnOCCzYi+fDM+SurBeP0exSI3gNr9k5FVG0GhLqTB6ips6iuGiXRlTHXVeb5rUGufcDUXnPXHgvewk2YAep0S3CryJe8WYpkLVFs3ERNvd9g4BfQSKZYfao9eXaaQn89dEdP+CLMNHs0cNoIIE1/06F6w2Ar1/B/4A"),
 		};
 
 		// given from server during communication

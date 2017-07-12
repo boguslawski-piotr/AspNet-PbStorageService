@@ -53,30 +53,17 @@ namespace pbXStorage.Server
 
 		ConcurrentDictionary<string, Storage> _storages = new ConcurrentDictionary<string, Storage>();
 
-		ISerializer _serializer { get; set; } = new NewtonsoftJsonSerializer();
-
-		ISimpleCryptographer _cryptographer { get; set; }
-
 		TimeSpan _objectsLifeTime;
 
 		#endregion
 
 		#region Constructor
 
-		public Manager(string id, TimeSpan objectsLifeTime, ISimpleCryptographer cryptographer = null, ISerializer serializer = null)
+		public Manager(string id, TimeSpan objectsLifeTime)
 		{
 			Id = id ?? throw new ArgumentException($"{nameof(Id)} must be valid object.");
 
 			_objectsLifeTime = objectsLifeTime;
-
-			_cryptographer = cryptographer;
-
-			if (serializer != null)
-				_serializer = serializer;
-		}
-
-		public async Task InitializeAsync(Context ctx)
-		{
 		}
 
 		#endregion
@@ -85,48 +72,62 @@ namespace pbXStorage.Server
 
 		readonly SemaphoreSlim _gcLock = new SemaphoreSlim(1);
 
-		void GCStorages()
+		int GCStorages()
 		{
+			int oc = 0;
 			foreach (var s in _storages.Where((s) => DateTime.Now - s.Value.AccesedOn > _objectsLifeTime))
 			{
 				if (_storages.TryRemove(s.Key, out Storage _))
+				{
 					Log.W($"removed storage '{s.Value.App.Token}/{s.Value.Id}' from memory", this);
+					oc++;
+				}
 			}
+			return oc;
 		}
 
-		void GCApps()
+		int GCApps()
 		{
+			int oc = 0;
 			foreach (var a in _apps.Where((a) => DateTime.Now - a.Value.AccesedOn > _objectsLifeTime
 												 && !_storages.Values.Any((_storage) => (_storage.App.Token == a.Value.Token)))
 			)
 			{
 				if (_apps.TryRemove(a.Key, out App _))
+				{
 					Log.W($"removed app '{a.Value.Repository.Id}/{a.Value.Token}' from memory", this);
+					oc++;
+				}
 			}
+			return oc;
 		}
 
-		void GCRepositories()
+		int GCRepositories()
 		{
+			int oc = 0;
 			foreach (var r in _repositories.Where((r) => DateTime.Now - r.Value.AccesedOn > _objectsLifeTime
 												 && !_apps.Values.Any((_app) => (_app.Repository.Id == r.Value.Id)))
 			)
 			{
 				if (_repositories.TryRemove(r.Key, out Repository _))
+				{
 					Log.W($"removed repository '{r.Value.Id}' from memory", this);
+					oc++;
+				}
 			}
+			return oc;
 		}
 
 		async Task GCAsync()
 		{
-			//TimeSpan objectLifeTime = TimeSpan.FromMinutes(1);
-			TimeSpan objectLifeTime = TimeSpan.FromMilliseconds(500);
-
 			await _gcLock.WaitAsync().ConfigureAwait(false);
 			try
 			{
-				GCStorages();
-				GCApps();
-				GCRepositories();
+				int oc = GCStorages();
+				oc += GCApps();
+				oc += GCRepositories();
+				if(oc > 64)
+					GC.Collect();
 			}
 			catch (Exception ex)
 			{
@@ -351,17 +352,6 @@ namespace pbXStorage.Server
 		#endregion
 
 		#region Tools
-
-		public Context CreateContext(IDb repositoriesDb)
-		{
-			repositoriesDb.Cryptographer = _cryptographer;
-			return new Context
-			{
-				RepositoriesDb = repositoriesDb,
-				Cryptographer = _cryptographer,
-				Serializer = _serializer,
-			};
-		}
 
 		string FROMBODY(string data)
 		{
