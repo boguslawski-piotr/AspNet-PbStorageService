@@ -13,8 +13,8 @@ namespace pbXStorage.TestClient
 		{
 			ApiUri = new Uri("http://10.211.55.3:23456/api/storage/"),
 			AppKeys = new RsaCryptographer().GenerateKeyPair(),
-			RepositoryId = "b455f321bc1341f0b20a21f2d305ec12636354891142899900",
-			RepositoryPublicKey = new RsaKeyPair(null, "DU9JDgAxCHrRJG5oPVpr//+kqQdCIAH8vo+YiPj72kTJRi/cDoqw5IIdQe2yYtsGB2C8ObocFQ3gxhOSp3QTgc9aktUdh0eTxHYPPXoOEzydTB8o9VLLdUQTozK3ZAjoYm+vkVYPXjvWiwjlW4dLzJUl8tBkxpSA9L5p5OUJk8tqVbapWnR19Ytx5AnUys49z1+t/X6qA657FRbz7tV44Pt+"),
+			RepositoryId = "6002a5cf8bb741709fb26ac26e2f46ab636355649156821517",
+			RepositoryPublicKey = new RsaKeyPair(null, "DZDJCQRBDMQiWvBt99Nn/iHtUG8JUb/fDxAA8PfrTO13nLh2y7eUr8a5xV/apVNKxTgO1LLBEL0OOUpHvWRThK6ibSm7WviG/hFzlbvLxanDyHWKQVlUayRdDJvOMpMPG271vEgfCq5zuEkDywVPX+gXooO0Thyf2jqm84mNCuX5Jb7mjmpydpp3hi7bkxHqGX0TnaJvODgeYj5Fsgb7HvgD"),
 		};
 
 		// given from server during communication
@@ -251,7 +251,7 @@ namespace pbXStorage.TestClient
 			await OpenStorageTestAsync(appToken, "test2");
 
 			//List<Task> l = new List<Task>();
-			for (int i = 0; i < 100; i++)
+			for (int i = 0; i < 1000; i++)
 			{
 				//l.Add(StoreThingTestAsync(storageToken, "test thing " + i.ToString(), "jakies dane....", (DateTime.Now - TimeSpan.FromHours(3))));
 				await StoreThingTestAsync(storageToken, "test thing " + i.ToString(), "jakies dane....", (DateTime.Now - TimeSpan.FromHours(3)));
@@ -299,7 +299,7 @@ namespace pbXStorage.TestClient
 		static async Task StressTestsAsync()
 		{
 			List<Task> l = new List<Task>();
-			for (int i = 0; i < 100; i++)
+			for (int i = 0; i < 10; i++)
 			{
 				l.Add(TestsAsync());
 			}
