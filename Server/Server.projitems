@@ -11,12 +11,15 @@
   <ItemGroup>
     <Compile Include="$(MSBuildThisFileDirectory)App.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Context.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)DbOnEF.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)DBOnFileSystemFactory.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)DbOnSDC.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)IDbFactory.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Repository.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)DbOnFileSystem.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)IDb.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Manager.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)SqliteFactory.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)SqlServerFactory.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Storage.cs" />
   </ItemGroup>
 </Project>

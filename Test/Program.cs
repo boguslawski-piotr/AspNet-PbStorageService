@@ -315,7 +315,7 @@ namespace Test.NETStd
 
 				await TestsAsync();
 
-				await StressTestsAsync();
+				//await StressTestsAsync();
 			}
 			catch (StorageOnPbXStorageException ex)
 			{

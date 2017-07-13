@@ -5,5 +5,6 @@
 		SQlite,
 		SqlServer,
 		DbOnFileSystem,
+		External,
 	}
 }

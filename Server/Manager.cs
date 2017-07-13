@@ -79,7 +79,7 @@ namespace pbXStorage.Server
 			{
 				if (_storages.TryRemove(s.Key, out Storage _))
 				{
-					Log.W($"removed storage '{s.Value.App.Token}/{s.Value.Id}' from memory", this);
+					Log.I($"removed storage '{s.Value.App.Token}/{s.Value.Id}' from memory.", this);
 					oc++;
 				}
 			}
@@ -95,7 +95,7 @@ namespace pbXStorage.Server
 			{
 				if (_apps.TryRemove(a.Key, out App _))
 				{
-					Log.W($"removed app '{a.Value.Repository.Id}/{a.Value.Token}' from memory", this);
+					Log.I($"removed app '{a.Value.Repository.Id}/{a.Value.Token}' from memory.", this);
 					oc++;
 				}
 			}
@@ -111,7 +111,7 @@ namespace pbXStorage.Server
 			{
 				if (_repositories.TryRemove(r.Key, out Repository _))
 				{
-					Log.W($"removed repository '{r.Value.Id}' from memory", this);
+					Log.I($"removed repository '{r.Value.Id}' from memory.", this);
 					oc++;
 				}
 			}
@@ -153,7 +153,7 @@ namespace pbXStorage.Server
 				Repository repository = await Repository.NewAsync(ctx, Id, name);
 				_repositories[repository.Id] = repository;
 
-				Log.I($"created new repository '{repository.Id}'.", this);
+				Log.D($"created '{name}, {repository.Id}'.", this);
 
 				return repository;
 			}
@@ -191,7 +191,7 @@ namespace pbXStorage.Server
 				_repositories.TryRemove(repositoryId, out Repository _);
 				await Repository.RemoveAsync(ctx, Id, repositoryId);
 
-				Log.I($"removed repository '{repositoryId}'.", this);
+				Log.D($"removed repository '{repositoryId}'.", this);
 
 				await GCAsync();
 			}
@@ -230,8 +230,10 @@ namespace pbXStorage.Server
 					app = new App(repository, appPublicKey);
 					_apps[app.Token] = app;
 
-					Log.I($"created new app '{repository.Id}/{app.Token}'.", this);
+					Log.D($"created '{repository.Id}/{app.Token}'.", this);
 				}
+				else
+					Log.D($"using '{repository.Id}/{app.Token}'.", this);
 
 				app.AccesedOn = DateTime.Now;
 				return OK(app.Token);
@@ -261,10 +263,10 @@ namespace pbXStorage.Server
 					storage = new Storage(app, storageId);
 					_storages[storage.Token] = storage;
 
-					Log.I($"created '{app.Token}/{storageId}'.", this);
+					Log.D($"created '{app.Token}/{storageId}'.", this);
 				}
 				else
-					Log.I($"opened '{app.Token}/{storageId}'.", this);
+					Log.D($"opened '{app.Token}/{storageId}'.", this);
 
 				storage.AccesedOn = DateTime.Now;
 				return OK(storage.TokenAndPublicKey);
@@ -361,15 +363,8 @@ namespace pbXStorage.Server
 		string OK(string data = null, [CallerMemberName]string callerName = null)
 		{
 			data = "OK" + (data != null ? $",{data}" : "");
-			Log.I(data, this, callerName);
+			Log.D(data, this, callerName);
 			return Obfuscator.Obfuscate(data);
-		}
-
-		string ERROR(PbXStorageErrorCode error, string message, [CallerMemberName]string callerName = null)
-		{
-			message = $"{(int)error},{message}";
-			Log.E(message, this, callerName);
-			return Obfuscator.Obfuscate($"ERROR,{message}");
 		}
 
 		string ERROR(PbXStorageErrorCode error, Exception ex, [CallerMemberName]string callerName = null)
@@ -380,6 +375,18 @@ namespace pbXStorage.Server
 				message += $" {ex.InnerException.Message + (ex.InnerException.Message.EndsWith(".") ? "" : ".")}";
 
 			return ERROR(error, message, callerName);
+		}
+
+		string ERROR(PbXStorageErrorCode error, string message, [CallerMemberName]string callerName = null)
+		{
+			message = $"{(int)error},{message}";
+
+			if (error != PbXStorageErrorCode.ThingNotFound)
+				Log.E(message, this, callerName);
+			else
+				Log.D(message, this, callerName);
+
+			return Obfuscator.Obfuscate($"ERROR,{message}");
 		}
 
 		#endregion

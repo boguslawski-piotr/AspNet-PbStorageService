@@ -1,82 +1,63 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Data.SqlClient;
 using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
-using Microsoft.Data.Sqlite;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using pbXNet;
 using pbXStorage.Server.NETCore.Data;
-using pbXStorage.Server.NETCore.Models;
 using pbXStorage.Server.NETCore.Services;
 
 namespace pbXStorage.Server.NETCore
 {
 	public class Startup
 	{
-		IHostingEnvironment HosttingEnvironment { get; }
+		IHostingEnvironment _hostingEnvironment { get; }
 
-		IConfiguration Configuration { get; }
+		IConfiguration _configuration { get; }
 
-		public Startup(IHostingEnvironment env, IConfiguration configuration)
+		public Startup(IHostingEnvironment hostingEnvironment, IConfiguration configuration)
 		{
-			HosttingEnvironment = env;
-			Configuration = configuration;
+			_hostingEnvironment = hostingEnvironment;
+			_configuration = configuration;
 		}
 
 		public void ConfigureServices(IServiceCollection services)
 		{
 			// Setup.
 
-			string serverId = Configuration.GetValue<string>("ServerId");
+			string serverId = _configuration.GetValue<string>("ServerId");
 
-			DbContextOptionsBuilder ConfigureDb(DbContextOptionsBuilder builder, string dbName, Provider[] unsupportedProviders = null)
+			string ConnectionStringFor(string dbName)
 			{
-				(string, string) ParseProviderAndConnectionString(string defaultValue)
-				{
-					string v = Configuration.GetValue<string>(dbName, null);
-					if (string.IsNullOrWhiteSpace(v))
-						v = defaultValue;
-					if (string.IsNullOrWhiteSpace(v))
-						return (null, null);
+				string v = _configuration.GetValue<string>(dbName, null);
+				if (string.IsNullOrWhiteSpace(v))
+					v = $"SQlite;Data Source={serverId}-{dbName}.db";
 
-					string[] pcs =
-						Environment.ExpandEnvironmentVariables(v)
-						.Replace("%ServerId%", serverId)
-						.Replace("%ContentRootPath%", HosttingEnvironment.ContentRootPath)
-						.Replace('/', Path.DirectorySeparatorChar)
-						.Split(new char[] { ';' }, 2);
+				v =
+					Environment.ExpandEnvironmentVariables(v)
+					.Replace("%ServerId%", serverId)
+					.Replace("%ContentRootPath%", _hostingEnvironment.ContentRootPath)
+					.Replace('/', Path.DirectorySeparatorChar);
 
-					return (pcs[0], pcs.Length > 1 ? pcs[1] : "");
-				}
+				Log.I($"{dbName}: {v?.Split(';')?[0]}", this);
 
-				(string provider, string connectionString) = ParseProviderAndConnectionString($"SQlite;Data Source={serverId}-{dbName}.db");
-
-				return builder
-					.UseDatabase(provider, connectionString, dbName, unsupportedProviders);
+				return v;
 			}
 
 			// Add databases.
 
-			int maxPoolSize = Configuration.GetValue<int>("MaxPoolSize", 128);
+			int maxPoolSize = _configuration.GetValue<int>("MaxPoolSize", 128);
 
 			services.AddDbContextPool<UsersDb>(
-				builder => ConfigureDb(builder, "UsersDb", new Provider[] { Provider.DbOnFileSystem }),
+				builder => builder.UseDatabase(ConnectionStringFor("UsersDb"), new Provider[] { Provider.DbOnFileSystem, Provider.External }),
 				maxPoolSize
 			);
 
 			services.AddRepositoriesDbPool(
-				builder => ConfigureDb(builder, "RepositoriesDb"),
+				builder => builder.UseDatabase(ConnectionStringFor("RepositoriesDb")),
 				maxPoolSize
 			);
 
@@ -107,10 +88,10 @@ namespace pbXStorage.Server.NETCore
 
 			// Add pbXStorage manager.
 
-			services.AddSingleton(new Manager(serverId, TimeSpan.FromHours(Configuration.GetValue<int>("ObjectsLifeTime", 12))));
+			services.AddSingleton(new Manager(serverId, TimeSpan.FromHours(_configuration.GetValue<int>("ObjectsLifeTime", 12))));
 		}
 
-		public async void Configure(IApplicationBuilder app, IHostingEnvironment env, ILoggerFactory loggerFactory, Manager manager)
+		public async void Configure(IApplicationBuilder app, IHostingEnvironment env)
 		{
 			// Setup error page.
 

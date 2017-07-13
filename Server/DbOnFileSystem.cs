@@ -21,7 +21,7 @@ namespace pbXStorage.Server
 		{
 			_fs = DeviceFileSystem.New(DeviceFileSystem.RootType.UserDefined, directory ?? "~");
 
-			Log.I($"Data will be stored in directory: '{directory}'.", this);
+			Log.I($"opened connection to database '{_fs.RootPath}'.", this);
 		}
 
 		public virtual void Dispose()

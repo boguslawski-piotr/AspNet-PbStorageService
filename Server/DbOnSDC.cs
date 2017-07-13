@@ -10,12 +10,20 @@ namespace pbXStorage.Server
 {
 	class DbOnSDC : IDb
 	{
+		public class Options
+		{
+			public string SqlForNTextDataType = "ntext";
+			public string SqlForNVarcharDataType = "nvarchar(?)";
+		}
+
+		Options _options;
 		DbConnection _db;
 		bool _closeDb;
 
-		public DbOnSDC(DbConnection db)
+		public DbOnSDC(DbConnection db, Options options = null)
 		{
 			_db = db;
+			_options = options ?? new Options();
 		}
 
 		public virtual void Dispose()
@@ -36,13 +44,13 @@ namespace pbXStorage.Server
 				await _db.OpenAsync().ConfigureAwait(false);
 				_closeDb = true;
 
-				Log.I($"opened database '{_db.DataSource}'.", this);
+				Log.I($"opened connection to database '{_db.DataSource}/{_db.Database}'.", this);
 			}
 			if (_db.State != System.Data.ConnectionState.Open)
 			{
 				await Task.Delay(1000).ConfigureAwait(false);
 				if (_db.State != System.Data.ConnectionState.Open)
-					throw new Exception($"Unable to connect to database '{_db.DataSource}'.");
+					throw new Exception($"Unable to connect to database '{_db.DataSource}/{_db.Database}'.");
 			}
 		}
 
@@ -87,11 +95,11 @@ namespace pbXStorage.Server
 			}
 		}
 
-		protected async Task<int> StatementAsync(string sql, params (string name, object value)[] args) => (int)await ExecuteCommandAsync(CommandType.Statement, sql, args).ConfigureAwait(false);
+		public async Task<int> StatementAsync(string sql, params (string name, object value)[] args) => (int)await ExecuteCommandAsync(CommandType.Statement, sql, args).ConfigureAwait(false);
 
-		protected async Task<object> ScalarAsync(string sql, params (string name, object value)[] args) => await ExecuteCommandAsync(CommandType.Scalar, sql, args).ConfigureAwait(false);
+		public async Task<object> ScalarAsync(string sql, params (string name, object value)[] args) => await ExecuteCommandAsync(CommandType.Scalar, sql, args).ConfigureAwait(false);
 
-		protected async Task<DbDataReader> QueryAsync(string sql, params (string name, object value)[] args) => (DbDataReader)await ExecuteCommandAsync(CommandType.Query, sql, args).ConfigureAwait(false);
+		public async Task<DbDataReader> QueryAsync(string sql, params (string name, object value)[] args) => (DbDataReader)await ExecuteCommandAsync(CommandType.Query, sql, args).ConfigureAwait(false);
 
 		public async Task CreateAsync()
 		{
@@ -107,15 +115,13 @@ namespace pbXStorage.Server
 
 			if (!thingsTableExists)
 			{
-				//string dataType = "nvarchar(max)";
-				string idsType = "nvarchar";
-				string dataType = "ntext";
+				string SqlForNVarcharDataType(int maxLength) => _options.SqlForNVarcharDataType.Replace("?", maxLength.ToString());
 
 				await StatementAsync(
 					"CREATE TABLE \"Things\" " +
-						$"(\"StorageId\" {idsType}(512) NOT NULL, " +
-						$"\"Id\" {idsType}(256) NOT NULL, " +
-						$"\"Data\" {dataType} NULL, " +
+						$"(\"StorageId\" {SqlForNVarcharDataType(512)} NOT NULL, " +
+						$"\"Id\" {SqlForNVarcharDataType(256)} NOT NULL, " +
+						$"\"Data\" {_options.SqlForNTextDataType} NULL, " +
 						"\"ModifiedOn\" bigint NOT NULL, " +
 						"CONSTRAINT \"PK_Things\" PRIMARY KEY (\"StorageId\", \"Id\"));"
 				).ConfigureAwait(false);
@@ -123,7 +129,7 @@ namespace pbXStorage.Server
 				await StatementAsync(
 					"CREATE INDEX \"IX_Things_StorageId\" ON \"Things\" (\"StorageId\");").ConfigureAwait(false);
 
-				Log.I("table Things has been created", this);
+				Log.I("table Things has been created.", this);
 			}
 		}
 

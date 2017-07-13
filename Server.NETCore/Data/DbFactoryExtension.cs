@@ -3,13 +3,15 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace pbXStorage.Server.NETCore.Data
 {
-	class DbOnFileSystemOptionsExtension : IDbContextOptionsExtension
+	public class DbFactoryExtension : IDbContextOptionsExtension
 	{
-		public string Directory;
+		public string ConnectionString { get; private set; }
+		public IDbFactory Factory { get; private set; }
 
-		public DbOnFileSystemOptionsExtension(string directory)
+		public DbFactoryExtension(string connectionString, IDbFactory factory)
 		{
-			Directory = directory;
+			ConnectionString = connectionString;
+			Factory = factory;
 		}
 
 		public bool ApplyServices(IServiceCollection services) => false;
