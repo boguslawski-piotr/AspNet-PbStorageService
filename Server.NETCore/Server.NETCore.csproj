@@ -10,8 +10,8 @@
 
   <PropertyGroup>
     <UserSecretsId>aspnet-Server.NETCore-9cc22d00-93bc-416e-bf0c-7fd389f69fea</UserSecretsId>
-    <RootNamespace>pbXStorage.Server.NETCore</RootNamespace>
-    <AssemblyName>pbXStorage.Server.NETCore</AssemblyName>
+    <RootNamespace>pbXStorage.Server.AspNetCore</RootNamespace>
+    <AssemblyName>pbXStorage.Server</AssemblyName>
   </PropertyGroup>
 
   <ItemGroup>
@@ -23,6 +23,7 @@
 
   <ItemGroup>
     <None Remove=".DS_Store" />
+    <None Remove="Properties\PublishProfiles\FolderProfile.pubxml" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.All" Version="2.0.0-preview2-final" />
@@ -41,7 +42,10 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\pbX\pbXNet.NETStd\pbXNet.NETStd.csproj" />
+    <ProjectReference Include="..\Server\Server.csproj" />
   </ItemGroup>
-  <Import Project="..\Server\Server.projitems" Label="Shared" />
-
+  <ItemGroup>
+    <Folder Include="Properties\PublishProfiles\" />
+  </ItemGroup>
+  
 </Project>

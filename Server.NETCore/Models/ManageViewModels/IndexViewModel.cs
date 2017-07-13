@@ -1,12 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using System.Collections.Generic;
 using Microsoft.AspNetCore.Identity;
 
-namespace pbXStorage.Server.NETCore.Models.ManageViewModels
+namespace pbXStorage.Server.AspNetCore.Models.ManageViewModels
 {
-    public class IndexViewModel
+	public class IndexViewModel
     {
         public bool HasPassword { get; set; }
 

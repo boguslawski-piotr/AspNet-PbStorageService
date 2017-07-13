@@ -1,12 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using System.Collections.Generic;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
-namespace pbXStorage.Server.NETCore.Models.ManageViewModels
+namespace pbXStorage.Server.AspNetCore.Models.ManageViewModels
 {
-    public class ConfigureTwoFactorViewModel
+	public class ConfigureTwoFactorViewModel
     {
         public string SelectedProvider { get; set; }
 

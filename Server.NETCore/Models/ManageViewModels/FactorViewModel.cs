@@ -1,11 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-
-namespace pbXStorage.Server.NETCore.Models.ManageViewModels
+﻿namespace pbXStorage.Server.AspNetCore.Models.ManageViewModels
 {
-    public class FactorViewModel
+	public class FactorViewModel
     {
         public string Purpose { get; set; }
     }

@@ -1,11 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using pbXNet;
 
-namespace pbXStorage.Server.NETCore
+namespace pbXStorage.Server.AspNetCore.Services
 {
 	class ILogger2MicrosoftILogger : pbXNet.ILogger
 	{

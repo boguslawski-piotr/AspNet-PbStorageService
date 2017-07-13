@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.DataProtection;
 using pbXNet;
 
-namespace pbXStorage.Server.NETCore.Services
+namespace pbXStorage.Server.AspNetCore.Services
 {
 	public class ContextBuilder
     {

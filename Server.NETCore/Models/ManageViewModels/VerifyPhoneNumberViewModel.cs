@@ -1,12 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using System.ComponentModel.DataAnnotations;
 
-namespace pbXStorage.Server.NETCore.Models.ManageViewModels
+namespace pbXStorage.Server.AspNetCore.Models.ManageViewModels
 {
-    public class VerifyPhoneNumberViewModel
+	public class VerifyPhoneNumberViewModel
     {
         [Required]
         public string Code { get; set; }

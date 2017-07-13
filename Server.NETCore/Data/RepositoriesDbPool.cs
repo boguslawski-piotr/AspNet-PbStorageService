@@ -3,7 +3,7 @@ using System.Collections.Concurrent;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 
-namespace pbXStorage.Server.NETCore.Data
+namespace pbXStorage.Server.AspNetCore.Data
 {
 	public class RepositoriesDbPool : IDisposable
 	{
@@ -30,8 +30,11 @@ namespace pbXStorage.Server.NETCore.Data
 
 		public virtual IDb Create()
 		{
-			var dbFactoryExtension = _options.FindExtension<DbFactoryExtension>() ?? throw new Exception("The database for repositories was not defined. Check your 'appsettings.json' file."); 
+			var dbFactoryExtension = _options.FindExtension<DbFactoryExtension>() ?? throw new Exception("The database for repositories was not defined. Check your 'appsettings.json' file.");
 			return dbFactoryExtension.Factory.Create(dbFactoryExtension.ConnectionString);
+
+			//MethodInfo dbFactoryCreate = dbFactoryExtension.Factory.GetType().GetRuntimeMethod("Create", new Type[] { typeof(string) });
+			//return (IDb)dbFactoryCreate.Invoke(dbFactoryExtension.Factory, new object[] { dbFactoryExtension.ConnectionString });
 		}
 
 		public IDb Rent()

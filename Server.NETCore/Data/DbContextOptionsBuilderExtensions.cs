@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using pbXNet;
 
-namespace pbXStorage.Server.NETCore.Data
+namespace pbXStorage.Server.AspNetCore.Data
 {
 	public static class DbContextOptionsBuilderExtensions
 	{
@@ -57,14 +57,19 @@ namespace pbXStorage.Server.NETCore.Data
 
 					AssemblyName providerAssemblyName = new AssemblyName(providerNames[1].Trim());
 					Assembly providerAssembly = Assembly.Load(providerAssemblyName);
+					//Assembly currentAssembly = typeof(DbContextOptionsBuilderExtensions).Assembly;
+					//string assemblyPath = Path.Combine(Path.GetDirectoryName(currentAssembly.Location), providerAssemblyName.Name + ".dll");
+					//Assembly providerAssembly = Assembly.LoadFrom(assemblyPath);
+
 					Log.I($"loaded assembly '{providerAssembly.FullName}'.");
 
 					string dbFactoryClassName = providerNames[0].Trim();
-					Type dbFactoryClass = providerAssembly.GetType(dbFactoryClassName, true, true);
-					Log.I($"class '{dbFactoryClass}' will be used to create database connection objects.");
+					object dbFactoryInstance = providerAssembly.CreateInstance(dbFactoryClassName, false);
+					Log.I($"class '{dbFactoryInstance.GetType()}' will be used to create database connection objects.");
+
 
 					return builder
-						.UseDbFactory(connectionString, (IDbFactory)Activator.CreateInstance(dbFactoryClass));
+						.UseDbFactory(connectionString, (IDbFactory)dbFactoryInstance);
 			}
 		}
 

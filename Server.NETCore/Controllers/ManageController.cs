@@ -1,21 +1,17 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using pbXStorage.Server.NETCore.Data;
-using pbXStorage.Server.NETCore.Models;
-using pbXStorage.Server.NETCore.Models.ManageViewModels;
-using pbXStorage.Server.NETCore.Services;
+using pbXStorage.Server.AspNetCore.Data;
+using pbXStorage.Server.AspNetCore.Models.ManageViewModels;
+using pbXStorage.Server.AspNetCore.Services;
 
-namespace pbXStorage.Server.NETCore.Controllers
+namespace pbXStorage.Server.AspNetCore.Controllers
 {
-    [Authorize]
+	[Authorize]
     public class ManageController : Controller
     {
         private readonly UserManager<ApplicationUser> _userManager;

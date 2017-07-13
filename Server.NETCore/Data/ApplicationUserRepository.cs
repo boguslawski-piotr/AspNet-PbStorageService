@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations.Schema;
 
-namespace pbXStorage.Server.NETCore.Data
+namespace pbXStorage.Server.AspNetCore.Data
 {
 	[Table("AspNetUserRepositories")]
 	public class ApplicationUserRepository

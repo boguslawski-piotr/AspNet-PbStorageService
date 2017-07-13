@@ -1,11 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 
-namespace pbXStorage.Server.NETCore.Services
+namespace pbXStorage.Server.AspNetCore.Services
 {
-    public interface ISmsSender
+	public interface ISmsSender
     {
         Task SendSmsAsync(string number, string message);
     }

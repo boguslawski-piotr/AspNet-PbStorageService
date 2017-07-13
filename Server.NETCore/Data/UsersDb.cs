@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
-namespace pbXStorage.Server.NETCore.Data
+namespace pbXStorage.Server.AspNetCore.Data
 {
 	public class UsersDb : IdentityDbContext<ApplicationUser>
 	{

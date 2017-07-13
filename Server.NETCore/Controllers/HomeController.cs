@@ -1,17 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using pbXNet;
-using pbXStorage.Server.NETCore.Data;
-using pbXStorage.Server.NETCore.Services;
+using pbXStorage.Server.AspNetCore.Data;
+using pbXStorage.Server.AspNetCore.Services;
 
-namespace pbXStorage.Server.NETCore.Controllers
+namespace pbXStorage.Server.AspNetCore.Controllers
 {
-    public class HomeController : Controller
+	public class HomeController : Controller
     {
 		Manager _manager;
 		Context _context;
