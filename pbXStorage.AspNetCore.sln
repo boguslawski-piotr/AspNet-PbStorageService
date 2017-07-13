@@ -1,0 +1,48 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.26621.2
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "pbXNet.Shared", "..\pbX\pbXNet\pbXNet.Shared.shproj", "{0F24CC4F-7A9B-4835-8F00-4DC291773539}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "pbXNet.NETStd", "..\pbX\pbXNet.NETStd\pbXNet.NETStd.csproj", "{9EE7F4CE-535E-4A31-BD49-ED95448764CA}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TestClient.NETCore", "TestClient.NETCore\TestClient.NETCore.csproj", "{FB1EC68D-2E61-4E27-97AE-C5CDC8AD2F23}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Server.AspNetCore", "Server.AspNetCore\Server.AspNetCore.csproj", "{AAA327FE-779F-4E8D-A2DF-471138BF3F54}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Repositories.NETCore", "Repositories\Repositories.NETCore.csproj", "{DC9BA2BC-A480-4B33-865A-30638812681B}"
+EndProject
+Global
+	GlobalSection(SharedMSBuildProjectFiles) = preSolution
+		..\pbX\pbXNet\pbXNet.Shared.projitems*{0f24cc4f-7a9b-4835-8f00-4dc291773539}*SharedItemsImports = 13
+	EndGlobalSection
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{9EE7F4CE-535E-4A31-BD49-ED95448764CA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9EE7F4CE-535E-4A31-BD49-ED95448764CA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9EE7F4CE-535E-4A31-BD49-ED95448764CA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9EE7F4CE-535E-4A31-BD49-ED95448764CA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FB1EC68D-2E61-4E27-97AE-C5CDC8AD2F23}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FB1EC68D-2E61-4E27-97AE-C5CDC8AD2F23}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FB1EC68D-2E61-4E27-97AE-C5CDC8AD2F23}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FB1EC68D-2E61-4E27-97AE-C5CDC8AD2F23}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AAA327FE-779F-4E8D-A2DF-471138BF3F54}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AAA327FE-779F-4E8D-A2DF-471138BF3F54}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AAA327FE-779F-4E8D-A2DF-471138BF3F54}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AAA327FE-779F-4E8D-A2DF-471138BF3F54}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DC9BA2BC-A480-4B33-865A-30638812681B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DC9BA2BC-A480-4B33-865A-30638812681B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DC9BA2BC-A480-4B33-865A-30638812681B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DC9BA2BC-A480-4B33-865A-30638812681B}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {612D3F40-D19F-45EC-8AD4-4C93BDC89BC0}
+	EndGlobalSection
+EndGlobal
