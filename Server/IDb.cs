@@ -20,7 +20,7 @@ namespace pbXStorage.Server
 		public string Id;
 	}
 
-	public interface IDb
+	public interface IDb : IDisposable
 	{
 		Task CreateAsync();
 

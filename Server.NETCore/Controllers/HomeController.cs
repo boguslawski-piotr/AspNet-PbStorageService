@@ -13,27 +13,43 @@ namespace pbXStorage.Server.NETCore.Controllers
 {
     public class HomeController : Controller
     {
-		readonly Manager _manager;
-		readonly Context _context;
-		readonly UsersDb _usersDb;
-		readonly UserManager<ApplicationUser> _userManager;
-		readonly SignInManager<ApplicationUser> _signInManager;
+		Manager _manager;
+		Context _context;
+		UsersDb _usersDb;
+		RepositoriesDbPool _repositoriesDbPool;
+		UserManager<ApplicationUser> _userManager;
+		SignInManager<ApplicationUser> _signInManager;
 
 		public HomeController(
 			Manager manager,
 			ContextBuilder contextBuilder,
-			IDataProtectionProvider dataProtectionProvider,
 			ISerializer serializer,
+			IDataProtectionProvider dataProtectionProvider,
 			UsersDb usersDb,
-			RepositoriesDb repositoriesDb,
+			RepositoriesDbPool repositoriesDbPool,
 			UserManager<ApplicationUser> userManager,
 			SignInManager<ApplicationUser> signInManager)
 		{
 			_manager = manager;
-			_context = contextBuilder.Build(repositoriesDb, dataProtectionProvider, serializer);
 			_usersDb = usersDb;
+			_repositoriesDbPool = repositoriesDbPool;
 			_userManager = userManager;
 			_signInManager = signInManager;
+			_context = contextBuilder.Build(repositoriesDbPool.Rent(), serializer, dataProtectionProvider);
+		}
+
+		protected override void Dispose(bool disposing)
+		{
+			_repositoriesDbPool?.Return(_context?.RepositoriesDb);
+
+			_manager = null;
+			_context = null;
+			_usersDb = null;
+			_userManager = null;
+			_signInManager = null;
+			_repositoriesDbPool = null;
+
+			base.Dispose(disposing);
 		}
 
 		async Task<ApplicationUser> GetUserAsync()

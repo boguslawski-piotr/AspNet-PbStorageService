@@ -5,10 +5,6 @@ namespace pbXStorage.Server.NETCore.Data
 {
 	public class UsersDb : IdentityDbContext<ApplicationUser>
 	{
-		public UsersDb() 
-			: base()
-		{ }
-
 		public UsersDb(DbContextOptions<UsersDb> options)
 			: base(options)
 		{

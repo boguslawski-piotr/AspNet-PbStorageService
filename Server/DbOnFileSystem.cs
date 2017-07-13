@@ -24,6 +24,13 @@ namespace pbXStorage.Server
 			Log.I($"Data will be stored in directory: '{directory}'.", this);
 		}
 
+		public virtual void Dispose()
+		{
+			_locks.Clear();
+			_locks = null;
+			_fs = null;
+		}
+
 		public async Task CreateAsync()
 		{
 		}

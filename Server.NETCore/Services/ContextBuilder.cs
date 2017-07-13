@@ -14,8 +14,8 @@ namespace pbXStorage.Server.NETCore.Services
 
 		public Context Build(
 			IDb repositoriesDb,
-			IDataProtectionProvider dataProtectionProvider,
-			ISerializer serializer)
+			ISerializer serializer,
+			IDataProtectionProvider dataProtectionProvider)
 		{
 			return new Context
 			{

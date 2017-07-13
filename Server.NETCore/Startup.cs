@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data.SqlClient;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -8,6 +9,7 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.Configuration;
@@ -38,7 +40,7 @@ namespace pbXStorage.Server.NETCore
 
 			string serverId = Configuration.GetValue<string>("ServerId");
 
-			DbContextOptionsBuilder ConfigureDbs(DbContextOptionsBuilder builder, string dbName, Provider[] unsupportedProviders = null)
+			DbContextOptionsBuilder ConfigureDb(DbContextOptionsBuilder builder, string dbName, Provider[] unsupportedProviders = null)
 			{
 				(string, string) ParseProviderAndConnectionString(string defaultValue)
 				{
@@ -61,17 +63,21 @@ namespace pbXStorage.Server.NETCore
 				(string provider, string connectionString) = ParseProviderAndConnectionString($"SQlite;Data Source={serverId}-{dbName}.db");
 
 				return builder
-					.UseDb(provider, connectionString, dbName, unsupportedProviders);
+					.UseDatabase(provider, connectionString, dbName, unsupportedProviders);
 			}
 
 			// Add databases.
 
-			services.AddDbContext<UsersDb>(
-				builder => ConfigureDbs(builder, "UsersDb", new Provider[] { Provider.DbOnFileSystem })
+			int maxPoolSize = Configuration.GetValue<int>("MaxPoolSize", 128);
+
+			services.AddDbContextPool<UsersDb>(
+				builder => ConfigureDb(builder, "UsersDb", new Provider[] { Provider.DbOnFileSystem }),
+				maxPoolSize
 			);
 
-			services.AddDbContext<RepositoriesDb>(
-				builder => ConfigureDbs(builder, "RepositoriesDb")
+			services.AddRepositoriesDbPool(
+				builder => ConfigureDb(builder, "RepositoriesDb"),
+				maxPoolSize
 			);
 
 			// Add framework services.
@@ -123,7 +129,7 @@ namespace pbXStorage.Server.NETCore
 
 			app.UseStaticFiles();
 
-			app.UseAuthentication(); 
+			app.UseAuthentication();
 
 			// Add external authentication middleware here. To configure them please see https://go.microsoft.com/fwlink/?LinkID=532715
 
@@ -139,8 +145,10 @@ namespace pbXStorage.Server.NETCore
 			UsersDb usersDb = app.ApplicationServices.GetService<UsersDb>();
 			usersDb.Create();
 
-			RepositoriesDb repositoriesDb = app.ApplicationServices.GetService<RepositoriesDb>();
+			RepositoriesDbPool repositoriesDbPool = app.ApplicationServices.GetService<RepositoriesDbPool>();
+			IDb repositoriesDb = repositoriesDbPool.Rent();
 			await repositoriesDb.CreateAsync();
+			repositoriesDbPool.Return(repositoriesDb);
 		}
 	}
 }

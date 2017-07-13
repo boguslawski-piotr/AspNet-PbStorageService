@@ -10,18 +10,31 @@ namespace pbXStorage.Server.NETCore.Controllers
 	[Route("api/[controller]")]
     public class StorageController : Controller
     {
-		readonly Manager _manager;
-		readonly Context _context;
+		Manager _manager;
+		Context _context;
+		RepositoriesDbPool _repositoriesDbPool;
 
 		public StorageController(
 			Manager manager,
 			ContextBuilder contextBuilder,
-			IDataProtectionProvider dataProtectionProvider,
 			ISerializer serializer,
-			RepositoriesDb repositoriesDb)
+			IDataProtectionProvider dataProtectionProvider,
+			RepositoriesDbPool repositoriesDbPool)
 		{
 			_manager = manager;
-			_context = contextBuilder.Build(repositoriesDb, dataProtectionProvider, serializer);
+			_repositoriesDbPool = repositoriesDbPool;
+			_context = contextBuilder.Build(repositoriesDbPool.Rent(), serializer, dataProtectionProvider);
+		}
+
+		protected override void Dispose(bool disposing)
+		{
+			_repositoriesDbPool?.Return(_context.RepositoriesDb);
+
+			_manager = null;
+			_context = null;
+			_repositoriesDbPool = null;
+
+			base.Dispose(disposing);
 		}
 
 		[HttpPost("registerapp/{repositoryId}")]

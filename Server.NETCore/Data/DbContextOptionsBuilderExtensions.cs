@@ -24,7 +24,7 @@ namespace pbXStorage.Server.NETCore.Data
 			}
 		}
 
-		public static DbContextOptionsBuilder UseDb(this DbContextOptionsBuilder builder, string providerName, string connectionString, string dbName, Provider[] unsupportedProviders = null)
+		public static DbContextOptionsBuilder UseDatabase(this DbContextOptionsBuilder builder, string providerName, string connectionString, string dbName, Provider[] unsupportedProviders = null)
 		{
 			if (string.IsNullOrWhiteSpace(providerName))
 				throw new ArgumentNullException(nameof(providerName));

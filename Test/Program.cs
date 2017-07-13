@@ -13,8 +13,8 @@ namespace Test.NETStd
 		{
 			ApiUri = new Uri("http://10.211.55.3:23456/api/storage/"),
 			AppKeys = new RsaCryptographer().GenerateKeyPair(),
-			RepositoryId = "cf93f9c5c2b24eea8da38d9e3368a874636353706652643641",
-			RepositoryPublicKey = new RsaKeyPair(null, "FdDHbQRBDADBiBagN0+aYf4h6ZRBV3/fBwgA+H2lrXElAsT3IFbwuXrnOCCzYi+fDM+SurBeP0exSI3gNr9k5FVG0GhLqTB6ips6iuGiXRlTHXVeb5rUGufcDUXnPXHgvewk2YAep0S3CryJe8WYpkLVFs3ERNvd9g4BfQSKZYfao9eXaaQn89dEdP+CLMNHs0cNoIIE1/06F6w2Ar1/B/4A"),
+			RepositoryId = "b455f321bc1341f0b20a21f2d305ec12636354891142899900",
+			RepositoryPublicKey = new RsaKeyPair(null, "DU9JDgAxCHrRJG5oPVpr//+kqQdCIAH8vo+YiPj72kTJRi/cDoqw5IIdQe2yYtsGB2C8ObocFQ3gxhOSp3QTgc9aktUdh0eTxHYPPXoOEzydTB8o9VLLdUQTozK3ZAjoYm+vkVYPXjvWiwjlW4dLzJUl8tBkxpSA9L5p5OUJk8tqVbapWnR19Ytx5AnUys49z1+t/X6qA657FRbz7tV44Pt+"),
 		};
 
 		// given from server during communication
@@ -315,7 +315,7 @@ namespace Test.NETStd
 
 				await TestsAsync();
 
-				//await StressTestsAsync();
+				await StressTestsAsync();
 			}
 			catch (StorageOnPbXStorageException ex)
 			{
