@@ -4,12 +4,7 @@
     <TargetFramework>netcoreapp2.0</TargetFramework>
   </PropertyGroup>
 
-  <!-- <PropertyGroup>
-    <PackageTargetFallback>$(PackageTargetFallback);portable-net45+win8+wp8+wpa81;</PackageTargetFallback>
-  </PropertyGroup> -->
-
   <PropertyGroup>
-    <UserSecretsId>aspnet-Server.NETCore-9cc22d00-93bc-416e-bf0c-7fd389f69fea</UserSecretsId>
     <RootNamespace>pbXStorage.Server.AspNetCore</RootNamespace>
     <AssemblyName>pbXStorage.Server</AssemblyName>
   </PropertyGroup>
@@ -42,10 +37,8 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\pbX\pbXNet.NETStd\pbXNet.NETStd.csproj" />
-    <ProjectReference Include="..\Repositories\Repositories.NETCore.csproj" />
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Properties\PublishProfiles\" />
-  </ItemGroup>
+  <Import Project="..\Repositories\Repositories.NETCore.projitems" Label="Shared" />
   
+   
 </Project>
