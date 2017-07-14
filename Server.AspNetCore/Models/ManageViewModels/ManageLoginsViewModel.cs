@@ -2,7 +2,7 @@
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 
-namespace pbXStorage.Repositories.AspNetCore.Models.ManageViewModels
+namespace pbXStorage.Server.AspNetCore.Models.ManageViewModels
 {
 	public class ManageLoginsViewModel
     {

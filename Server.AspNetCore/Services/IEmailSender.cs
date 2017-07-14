@@ -1,6 +1,6 @@
 ﻿using System.Threading.Tasks;
 
-namespace pbXStorage.Repositories.AspNetCore.Services
+namespace pbXStorage.Server.AspNetCore.Services
 {
 	public interface IEmailSender
     {

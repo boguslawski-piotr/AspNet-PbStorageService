@@ -1,7 +1,8 @@
 ﻿using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
+using pbXStorage.Repositories;
 
-namespace pbXStorage.Repositories.AspNetCore.Data
+namespace pbXStorage.Server.AspNetCore.Data
 {
 	public class DbFactoryExtension : IDbContextOptionsExtension
 	{

@@ -4,9 +4,9 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
-using pbXStorage.Repositories.AspNetCore.Services;
+using pbXStorage.Server.AspNetCore.Services;
 
-namespace pbXStorage.Repositories.AspNetCore
+namespace pbXStorage.Server.AspNetCore
 {
 	public class Program
 	{

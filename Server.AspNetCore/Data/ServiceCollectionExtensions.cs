@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace pbXStorage.Repositories.AspNetCore.Data
+namespace pbXStorage.Server.AspNetCore.Data
 {
 	public static class ServiceCollectionExtensions
 	{

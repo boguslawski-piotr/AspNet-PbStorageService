@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
-namespace pbXStorage.Repositories.AspNetCore.Models.AccountViewModels
+namespace pbXStorage.Server.AspNetCore.Models.AccountViewModels
 {
 	public class SendCodeViewModel
     {

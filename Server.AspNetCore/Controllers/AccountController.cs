@@ -7,11 +7,11 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Logging;
-using pbXStorage.Repositories.AspNetCore.Data;
-using pbXStorage.Repositories.AspNetCore.Models.AccountViewModels;
-using pbXStorage.Repositories.AspNetCore.Services;
+using pbXStorage.Server.AspNetCore.Data;
+using pbXStorage.Server.AspNetCore.Models.AccountViewModels;
+using pbXStorage.Server.AspNetCore.Services;
 
-namespace pbXStorage.Repositories.AspNetCore.Controllers
+namespace pbXStorage.Server.AspNetCore.Controllers
 {
 	[Authorize]
     public class AccountController : Controller

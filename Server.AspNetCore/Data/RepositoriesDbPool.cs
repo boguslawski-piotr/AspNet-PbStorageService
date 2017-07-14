@@ -2,8 +2,9 @@
 using System.Collections.Concurrent;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using pbXStorage.Repositories;
 
-namespace pbXStorage.Repositories.AspNetCore.Data
+namespace pbXStorage.Server.AspNetCore.Data
 {
 	public class RepositoriesDbPool : IDisposable
 	{

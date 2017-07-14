@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace pbXStorage.Repositories.AspNetCore.Models.ManageViewModels
+namespace pbXStorage.Server.AspNetCore.Models.ManageViewModels
 {
 	public class VerifyPhoneNumberViewModel
     {

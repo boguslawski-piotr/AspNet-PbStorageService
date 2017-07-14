@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace pbXStorage.Repositories.AspNetCore.Models.AccountViewModels
+namespace pbXStorage.Server.AspNetCore.Models.AccountViewModels
 {
 	public class ForgotPasswordViewModel
     {

@@ -2,10 +2,11 @@
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Mvc;
 using pbXNet;
-using pbXStorage.Repositories.AspNetCore.Data;
-using pbXStorage.Repositories.AspNetCore.Services;
+using pbXStorage.Repositories;
+using pbXStorage.Server.AspNetCore.Data;
+using pbXStorage.Server.AspNetCore.Services;
 
-namespace pbXStorage.Repositories.AspNetCore.Controllers
+namespace pbXStorage.Server.AspNetCore.Controllers
 {
 	[Route("api/[controller]")]
     public class StorageController : Controller

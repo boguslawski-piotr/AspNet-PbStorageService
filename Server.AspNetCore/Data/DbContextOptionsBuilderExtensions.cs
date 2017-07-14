@@ -5,8 +5,9 @@ using System.Reflection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using pbXNet;
+using pbXStorage.Repositories;
 
-namespace pbXStorage.Repositories.AspNetCore.Data
+namespace pbXStorage.Server.AspNetCore.Data
 {
 	public static class DbContextOptionsBuilderExtensions
 	{

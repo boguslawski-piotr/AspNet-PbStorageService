@@ -2,7 +2,7 @@
 using Microsoft.Extensions.Logging;
 using pbXNet;
 
-namespace pbXStorage.Repositories.AspNetCore.Services
+namespace pbXStorage.Server.AspNetCore.Services
 {
 	class ILogger2MicrosoftILogger : pbXNet.ILogger
 	{

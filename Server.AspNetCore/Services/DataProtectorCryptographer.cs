@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.DataProtection;
+using pbXStorage.Repositories;
 
-namespace pbXStorage.Repositories.AspNetCore.Services
+namespace pbXStorage.Server.AspNetCore.Services
 {
 	class DataProtectorCryptographer : ISimpleCryptographer
 	{

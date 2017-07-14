@@ -1,4 +1,4 @@
-﻿namespace pbXStorage.Repositories.AspNetCore.Data
+﻿namespace pbXStorage.Server.AspNetCore.Data
 {
 	public enum Provider
 	{

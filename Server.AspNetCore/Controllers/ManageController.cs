@@ -5,11 +5,11 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using pbXStorage.Repositories.AspNetCore.Data;
-using pbXStorage.Repositories.AspNetCore.Models.ManageViewModels;
-using pbXStorage.Repositories.AspNetCore.Services;
+using pbXStorage.Server.AspNetCore.Data;
+using pbXStorage.Server.AspNetCore.Models.ManageViewModels;
+using pbXStorage.Server.AspNetCore.Services;
 
-namespace pbXStorage.Repositories.AspNetCore.Controllers
+namespace pbXStorage.Server.AspNetCore.Controllers
 {
 	[Authorize]
     public class ManageController : Controller

@@ -7,10 +7,11 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using pbXNet;
-using pbXStorage.Repositories.AspNetCore.Data;
-using pbXStorage.Repositories.AspNetCore.Services;
+using pbXStorage.Repositories;
+using pbXStorage.Server.AspNetCore.Data;
+using pbXStorage.Server.AspNetCore.Services;
 
-namespace pbXStorage.Repositories.AspNetCore
+namespace pbXStorage.Server.AspNetCore
 {
 	public class Startup
 	{
