@@ -30,11 +30,8 @@ namespace pbXStorage.Repositories.AspNetCore.Data
 
 		public virtual IDb Create()
 		{
-			var dbFactoryExtension = _options.FindExtension<DbFactoryExtension>() ?? throw new Exception("The database for repositories was not defined. Check your 'appsettings.json' file.");
-			return dbFactoryExtension.Factory.Create(dbFactoryExtension.ConnectionString);
-
-			//MethodInfo dbFactoryCreate = dbFactoryExtension.Factory.GetType().GetRuntimeMethod("Create", new Type[] { typeof(string) });
-			//return (IDb)dbFactoryCreate.Invoke(dbFactoryExtension.Factory, new object[] { dbFactoryExtension.ConnectionString });
+			var dbFactoryExtension = _options.FindExtension<DbFactoryExtension>() ?? throw new Exception("The database factory was not defined. Check your 'appsettings.json' file.");
+			return dbFactoryExtension.Factory.Create(dbFactoryExtension.ConnectionString) ?? throw new Exception("The database factory did not create a valid object. Check your 'appsettings.json' file.");
 		}
 
 		public IDb Rent()

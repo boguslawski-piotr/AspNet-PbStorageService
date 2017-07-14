@@ -54,22 +54,27 @@ namespace pbXStorage.Repositories.AspNetCore.Data
 
 				default:
 					string[] providerNames = providerName.Split(',', 2);
-
 					AssemblyName providerAssemblyName = new AssemblyName(providerNames[1].Trim());
-					Assembly providerAssembly = Assembly.Load(providerAssemblyName);
-					//Assembly currentAssembly = typeof(DbContextOptionsBuilderExtensions).Assembly;
-					//string assemblyPath = Path.Combine(Path.GetDirectoryName(currentAssembly.Location), providerAssemblyName.Name + ".dll");
-					//Assembly providerAssembly = Assembly.LoadFrom(assemblyPath);
+
+					// I'm not able to force this line to work, regardless of where I place the assembly file :(
+					// TODO: try harder...
+					//Assembly providerAssembly = Assembly.Load(providerAssemblyName);
+
+					// This works OK, but, according to Microsoft, Assembly.LoadFrom is obsolete :(
+					Assembly thisAssembly = typeof(DbContextOptionsBuilderExtensions).Assembly;
+					Assembly providerAssembly = Assembly.LoadFrom(
+						Path.Combine(Path.GetDirectoryName(thisAssembly.Location), providerAssemblyName.Name) + ".dll"
+					);
 
 					Log.I($"loaded assembly '{providerAssembly.FullName}'.");
 
 					string dbFactoryClassName = providerNames[0].Trim();
-					object dbFactoryInstance = providerAssembly.CreateInstance(dbFactoryClassName, false);
+					var dbFactoryInstance = (IDbFactory)providerAssembly.CreateInstance(dbFactoryClassName, false);
+
 					Log.I($"class '{dbFactoryInstance.GetType()}' will be used to create database connection objects.");
 
-
 					return builder
-						.UseDbFactory(connectionString, (IDbFactory)dbFactoryInstance);
+						.UseDbFactory(connectionString, dbFactoryInstance);
 			}
 		}
 

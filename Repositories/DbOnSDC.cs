@@ -8,7 +8,7 @@ using pbXNet;
 
 namespace pbXStorage.Repositories
 {
-	class DbOnSDC : IDb
+	public class DbOnSDC : IDb
 	{
 		public class Options
 		{

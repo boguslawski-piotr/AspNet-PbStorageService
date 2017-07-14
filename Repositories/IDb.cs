@@ -12,7 +12,7 @@ namespace pbXStorage.Repositories
 
 	public struct IdInDb
 	{
-		// always as: repositoryId[/StorageId]
+		// always as: repositoryId[/storageId]
 		public string StorageId;
 
 		public IdInDbType Type;

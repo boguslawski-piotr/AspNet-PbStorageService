@@ -28,7 +28,7 @@ namespace pbXStorage.Repositories.AspNetCore
 		{
 			// Setup.
 
-			string serverId = _configuration.GetValue<string>("ServerId");
+			string serverId = _configuration.GetValue<string>("ServerId") ?? throw new Exception("'ServerId' must be defined in 'appsettings.json'.");
 
 			string ConnectionStringFor(string dbName)
 			{

@@ -4,9 +4,9 @@
     <TargetFramework>netcoreapp2.0</TargetFramework>
   </PropertyGroup>
 
-  <PropertyGroup>
+  <!-- <PropertyGroup>
     <PackageTargetFallback>$(PackageTargetFallback);portable-net45+win8+wp8+wpa81;</PackageTargetFallback>
-  </PropertyGroup>
+  </PropertyGroup> -->
 
   <PropertyGroup>
     <UserSecretsId>aspnet-Server.NETCore-9cc22d00-93bc-416e-bf0c-7fd389f69fea</UserSecretsId>
