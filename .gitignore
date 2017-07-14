@@ -267,3 +267,6 @@ ASP.NET Core MVC Server/ala
 **/*pbXStorage*/*
 
 *.db
+
+.vscode
+

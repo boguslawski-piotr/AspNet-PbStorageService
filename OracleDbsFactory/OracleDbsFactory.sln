@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.26621.2
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OracleDbFactory.NETCore", "OracleDbFactory.NETCore.csproj", "{07B14B3A-6B18-478F-A57B-C6A0EDAFD852}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OracleDbsFactory.NETCore", "OracleDbsFactory.NETCore.csproj", "{07B14B3A-6B18-478F-A57B-C6A0EDAFD852}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "pbXNet.NETStd", "..\..\pbX\pbXNet.NETStd\pbXNet.NETStd.csproj", "{9DAD3071-AF02-433F-BAAD-34632D62EF9C}"
 EndProject
