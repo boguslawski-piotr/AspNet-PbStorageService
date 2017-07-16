@@ -1,4 +1,5 @@
 ﻿using Microsoft.Data.Sqlite;
+using pbXNet.Database;
 
 namespace pbXStorage.Repositories
 {
@@ -6,7 +7,7 @@ namespace pbXStorage.Repositories
 	{
 		public IDb Create(string connectionString)
 		{
-			return new DbOnSDC(new SqliteConnection(connectionString));
+			return new DbOnSDC(new SDCDatabase(new SqliteConnection(connectionString)));
 		}
 	}
 }

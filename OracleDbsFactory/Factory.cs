@@ -1,4 +1,5 @@
-﻿using pbXStorage.Repositories;
+﻿using pbXNet;
+using pbXStorage.Repositories;
 
 namespace Oracle
 {
@@ -8,7 +9,7 @@ namespace Oracle
 		{
 			// First: install Oracle.ManagedDataAccess NuGet package
 			// Second: uncomment line below
-			//return new DbOnSDC(new Oracle.DataAccess.Client.OracleConnection(connectionString));
+			//return new DbOnSDC(new SDCDatabase(new Oracle.DataAccess.Client.OracleConnection(connectionString)));
 			return null;
 		}
 	}
@@ -17,7 +18,7 @@ namespace Oracle
 	{
 		public IDb Create(string connectionString)
 		{
-			return new DbOnSDC(new MySql.Data.MySqlClient.MySqlConnection(connectionString));
+			return new DbOnSDC(new SDCDatabase(new MySql.Data.MySqlClient.MySqlConnection(connectionString)));
 		}
 	}
 }

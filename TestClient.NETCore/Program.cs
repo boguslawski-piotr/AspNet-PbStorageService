@@ -251,7 +251,7 @@ namespace pbXStorage.TestClient
 			await OpenStorageTestAsync(appToken, "test2");
 
 			//List<Task> l = new List<Task>();
-			for (int i = 0; i < 1000; i++)
+			for (int i = 0; i < 10; i++)
 			{
 				//l.Add(StoreThingTestAsync(storageToken, "test thing " + i.ToString(), "jakies dane....", (DateTime.Now - TimeSpan.FromHours(3))));
 				await StoreThingTestAsync(storageToken, "test thing " + i.ToString(), "jakies dane....", (DateTime.Now - TimeSpan.FromHours(3)));
@@ -287,7 +287,7 @@ namespace pbXStorage.TestClient
 			}
 			catch (StorageThingNotFoundException) { }
 
-			//await DiscardThingTestAsync(storageToken, "test thing");
+			await DiscardThingTestAsync(storageToken, "test thing");
 
 			await FindThingIdsTestAsync(storageToken, "");
 
