@@ -6,7 +6,7 @@ namespace pbXStorage.Repositories
 {
 	class SqlServerSqlBuilder : SqlBuilder
 	{
-		public override SqlBuilder New => new SqlServerSqlBuilder();
+		public override SqlBuilder New() => new SqlServerSqlBuilder();
 
 		public override string TextTypeName => "varchar(max)";
 		public override string NTextTypeName => "nvarchar(max)";

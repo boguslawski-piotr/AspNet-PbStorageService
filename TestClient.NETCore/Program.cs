@@ -13,8 +13,8 @@ namespace pbXStorage.TestClient
 		{
 			ApiUri = new Uri("http://10.211.55.3:23456/api/storage/"),
 			AppKeys = new RsaCryptographer().GenerateKeyPair(),
-			RepositoryId = "ae848e60f13645bb8e837f39d8193f23636355887489822070",
-			RepositoryPublicKey = new RsaKeyPair(null, "Dc67DQAxCAPQiSLx8REogZD9R7o0rvxkr7WIiYjXyi1fX9Wgmu5P8hbKVYhChtKLYAbKawrbwRgZcG15QUkp2fIZX7sHWVX2IY/bsbnnqpSpxTfWBCADV4nh6CqNqcmxNxHC0LcQM9snyuL5KL0tzTo73Dc2PXWT2z+n/TAqmPu0+zvbR9hgh6VVJAeSVkQ2UIpGyxE/Z+9nqnWCXkfG51vrBw=="),
+			RepositoryId = "db6af94274ac4419a4d0d75fad7cd92c636358255325911168",
+			RepositoryPublicKey = new RsaKeyPair(null, "DZBJDgAxCMNeNBIplOVYoPz/SdNrJFtWvu8jEBG+77DkpuWjupOD53T61aaoQ0bDzciN5cJ8PKK38ViF7w20r7RdSgHdJCllzipNeNiNg9s5XfDnc3DlIdLBOS6+CuZmj70gWaFvls6eciHVW7rX5NbAddTcehIzKNaG9aQ7XRFjtciSiQipXEPQTmQynE+Dz7aXEw2foHbdruaHnu4ib74Hfg=="),
 		};
 
 		// given from server during communication
@@ -288,6 +288,12 @@ namespace pbXStorage.TestClient
 			catch (StorageThingNotFoundException) { }
 
 			await DiscardThingTestAsync(storageToken, "test thing");
+
+			try
+			{
+				await GetThingTestAsync(storageToken, "test thing");
+			}
+			catch (StorageThingNotFoundException) { }
 
 			await FindThingIdsTestAsync(storageToken, "");
 

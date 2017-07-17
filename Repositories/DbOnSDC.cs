@@ -30,9 +30,10 @@ namespace pbXStorage.Repositories
 			public long ModifiedOn { get; set; }
 		}
 
-		SDCDatabase _db;
+		IDatabase _db;
+		ITable<Thing> _things;
 
-		public DbOnSDC(SDCDatabase db)
+		public DbOnSDC(IDatabase db)
 		{
 			_db = db;
 		}
@@ -45,7 +46,36 @@ namespace pbXStorage.Repositories
 
 		public async Task CreateAsync()
 		{
-			ITable<Thing> _things = await _db.CreateTableAsync<Thing>(TableName);
+			//await _db.DropTableAsync(TableName);
+			_things = await _db.TableAsync<Thing>(TableName);
+
+			Thing t = new Thing
+			{
+				StorageId = "cos",
+				Id = "cos",
+			};
+
+			//t = await _things.FindAsync(t);
+
+			//_things = await _db.TableAsync<Thing>(TableName + "_test");
+
+			t.Data = "cos";
+			t.ModifiedOn = 0;
+			//await _things.InsertOrUpdateAsync(t);
+			//await _things.UpdateAsync(t);
+			bool rc = await ((SDCTable<Thing>)_things).ExistsAsync(t);
+
+			await _things.DeleteAsync(t);
+
+		}
+
+		Thing PrepareThingPk(string storageId, string thingId)
+		{
+			return new Thing
+			{
+				StorageId = storageId,
+				Id = thingId,
+			};
 		}
 
 		public async Task StoreThingAsync(string storageId, string thingId, string data, DateTime modifiedOn, ISimpleCryptographer cryptographer = null)
@@ -53,80 +83,48 @@ namespace pbXStorage.Repositories
 			if (cryptographer != null)
 				data = cryptographer.Encrypt(data);
 
-			object[] parameters = new object[] {
-				storageId,
-				thingId,
-				data,
-				modifiedOn.ToUniversalTime().Ticks,
-			};
+			Thing thing = PrepareThingPk(storageId, thingId);
+			thing.Data = data;
+			thing.ModifiedOn = modifiedOn.ToUniversalTime().Ticks;
 
-			if (await ThingExistsAsync(storageId, thingId))
-			{
-				await _db.StatementAsync(_db.SqlBuilder
-					.Update(TableName)
-						["Data"].P(3)
-						["ModifiedOn"].P(4)
-					.Where
-						["StorageId"].Eq.P(1)
-						.And
-						["Id"].Eq.P(2),
-					parameters
-				)
-				.ConfigureAwait(false);
-			}
-			else
-			{
-				await _db.StatementAsync(_db.SqlBuilder
-					.InsertInto(TableName)["StorageId"]["Id"]["Data"]["ModifiedOn"]
-					.Values.P(1).P(2).P(3).P(4),
-					parameters
-				)
-				.ConfigureAwait(false);
-			}
+			await _things.InsertOrUpdateAsync(thing).ConfigureAwait(false);
+		}
+
+		async Task<Thing> GetThingRawCopyAsync(string storageId, string thingId)
+		{
+			return await _things.FindAsync(PrepareThingPk(storageId, thingId)).ConfigureAwait(false);
 		}
 
 		public async Task<bool> ThingExistsAsync(string storageId, string thingId)
 		{
-			return Convert.ToBoolean(
-				await _db.ScalarAsync<object>("SELECT 1 FROM Things WHERE StorageId = @_1 and Id = @_2;", storageId, thingId).ConfigureAwait(false)
-			);
+			return await GetThingRawCopyAsync(storageId, thingId).ConfigureAwait(false) != null;
 		}
 
 		public async Task<DateTime> GetThingModifiedOnAsync(string storageId, string thingId)
 		{
-			object rc = await _db.ScalarAsync<object>("SELECT ModifiedOn FROM Things WHERE StorageId = @_1 and Id = @_2;", storageId, thingId).ConfigureAwait(false);
-			if (rc == null)
-				throw new Exception(T.Localized("PXS_ThingNotFound", storageId, thingId));
-			return new DateTime(Convert.ToInt64(rc), DateTimeKind.Utc);
+			Thing thing = await GetThingRawCopyAsync(storageId, thingId).ConfigureAwait(false) ?? throw new Exception(T.Localized("PXS_ThingNotFound", storageId, thingId));
+
+			return new DateTime(thing.ModifiedOn, DateTimeKind.Utc);
 		}
 
 		public async Task<string> GetThingCopyAsync(string storageId, string thingId, ISimpleCryptographer cryptographer = null)
 		{
-			string data = await _db.ScalarAsync<string>("SELECT Data FROM Things WHERE StorageId = @_1 and Id = @_2;", storageId, thingId).ConfigureAwait(false);
-			if (data == null)
-				throw new Exception(T.Localized("PXS_ThingNotFound", storageId, thingId));
+			Thing thing = await GetThingRawCopyAsync(storageId, thingId).ConfigureAwait(false) ?? throw new Exception(T.Localized("PXS_ThingNotFound", storageId, thingId));
 
 			if (cryptographer != null)
-				data = cryptographer.Decrypt(data);
+				thing.Data = cryptographer.Decrypt(thing.Data);
 
-			return data;
+			return thing.Data;
 		}
 
 		public async Task DiscardThingAsync(string storageId, string thingId)
 		{
-			if (await ThingExistsAsync(storageId, thingId))
-			{
-				await _db.StatementAsync(_db.SqlBuilder
-					.Delete.From(TableName).Where["StorageId"].Eq.P(1).And["Id"].Eq.P(2),
-					storageId, thingId
-				)
-				.ConfigureAwait(false);
-			}
+			await _things.DeleteAsync(PrepareThingPk(storageId, thingId)).ConfigureAwait(false);
 		}
 
 		public async Task<IEnumerable<IdInDb>> FindThingIdsAsync(string storageId, string pattern)
 		{
-			using (IQuery<Thing> q = await _db.QueryAsync<Thing>("SELECT StorageId, Id FROM Things WHERE StorageId = @_1;", storageId).ConfigureAwait(false))
+			using (IQueryResult<Thing> q = await _db.QueryAsync<Thing>($"SELECT StorageId, Id FROM {TableName} WHERE StorageId = @_1;", storageId).ConfigureAwait(false))
 			{
 				bool emptyPattern = string.IsNullOrWhiteSpace(pattern);
 				List<IdInDb> ids = new List<IdInDb>();
@@ -147,9 +145,9 @@ namespace pbXStorage.Repositories
 
 		public async Task DiscardAllAsync(string storageId)
 		{
-			await _db.StatementAsync("DELETE FROM Things WHERE StorageId = @_1;", storageId).ConfigureAwait(false);
+			await _db.StatementAsync($"DELETE FROM {TableName} WHERE StorageId = @_1;", storageId).ConfigureAwait(false);
 			if (storageId.IndexOf('/') < 0)
-				await _db.StatementAsync("DELETE FROM Things WHERE StorageId like @_1;", storageId + "/%").ConfigureAwait(false);
+				await _db.StatementAsync($"DELETE FROM {TableName} WHERE StorageId like @_1;", storageId + "/%").ConfigureAwait(false);
 
 			// StartsWith:
 			// select * from Things where (StorageId like "test" || '%' and (substr(StorageId, 1, length("test"))) = "test") or StorageId = ""
@@ -157,11 +155,12 @@ namespace pbXStorage.Repositories
 
 		public async Task<IEnumerable<IdInDb>> FindAllIdsAsync(string storageId, string pattern)
 		{
-			SqlBuilder sql = _db.SqlBuilder
-				.Select["StorageId"]["Id"].From(TableName)
-				.Where;
+			SqlBuilder sql = _db.Sql
+				.Select()["StorageId"]["Id"]
+				.From(TableName)
+				.Where();
 
-			IQuery<Thing> q = null;
+			IQueryResult<Thing> q = null;
 			if (storageId.IndexOf('/') < 0)
 				q = await _db.QueryAsync<Thing>(sql["StorageId"].Like.P(1), storageId + "/%").ConfigureAwait(false);
 			else
