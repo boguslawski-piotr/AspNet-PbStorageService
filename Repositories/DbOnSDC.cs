@@ -40,13 +40,14 @@ namespace pbXStorage.Repositories
 
 		public virtual void Dispose()
 		{
+			_things?.Dispose();
+			_things = null;
 			_db?.Dispose();
 			_db = null;
 		}
 
 		public async Task CreateAsync()
 		{
-			//await _db.DropTableAsync(TableName);
 			_things = await _db.TableAsync<Thing>(TableName);
 		}
 
@@ -105,7 +106,7 @@ namespace pbXStorage.Repositories
 
 		public async Task<IEnumerable<IdInDb>> FindThingIdsAsync(string storageId, string pattern)
 		{
-			using (IQueryResult<Thing> q = await _things.Rows.Where(r => r.StorageId == storageId).QueryAsync().ConfigureAwait(false))
+			using (IQueryResult<Thing> q = await _things.Rows.Where(r => r.StorageId == storageId).ResultAsync().ConfigureAwait(false))
 			{
 				bool emptyPattern = string.IsNullOrWhiteSpace(pattern);
 				List<IdInDb> ids = new List<IdInDb>();
@@ -136,9 +137,9 @@ namespace pbXStorage.Repositories
 			IQueryResult<Thing> q = null;
 
 			if (storageId.IndexOf('/') < 0)
-				q = await _things.Rows.Where(r => r.StorageId.StartsWith(storageId)).QueryAsync().ConfigureAwait(false);
+				q = await _things.Rows.Where(r => r.StorageId.StartsWith(storageId)).ResultAsync().ConfigureAwait(false);
 			else
-				q = await _things.Rows.Where(r => r.StorageId == storageId).QueryAsync().ConfigureAwait(false);
+				q = await _things.Rows.Where(r => r.StorageId == storageId).ResultAsync().ConfigureAwait(false);
 
 			using (q)
 			{

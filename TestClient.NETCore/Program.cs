@@ -13,8 +13,8 @@ namespace pbXStorage.TestClient
 		{
 			ApiUri = new Uri("http://10.211.55.3:23456/api/storage/"),
 			AppKeys = new RsaCryptographer().GenerateKeyPair(),
-			RepositoryId = "db6af94274ac4419a4d0d75fad7cd92c636358255325911168",
-			RepositoryPublicKey = new RsaKeyPair(null, "DZBJDgAxCMNeNBIplOVYoPz/SdNrJFtWvu8jEBG+77DkpuWjupOD53T61aaoQ0bDzciN5cJ8PKK38ViF7w20r7RdSgHdJCllzipNeNiNg9s5XfDnc3DlIdLBOS6+CuZmj70gWaFvls6eciHVW7rX5NbAddTcehIzKNaG9aQ7XRFjtciSiQipXEPQTmQynE+Dz7aXEw2foHbdruaHnu4ib74Hfg=="),
+			RepositoryId = "6f2c9c3535aa4908bd7f2fdd31935b05636360587049270607",
+			RepositoryPublicKey = new RsaKeyPair(null, "DY+5EQAxCAMruhnMZwh5+y/pnGul1fd9cADgfF8l+EhKg+bi6vVcCzX2w2pBxGwGbC7XLPAlbQ4dpB6qXrHy0FsYR4EH7FYKj+M5ctk7kmo0PB5mVYJUsRPknSOVnWSV1BQ+xkLsAn2qNvBCxO5aauDecLzESmBcN4dRmPvpRjI9mN8w8sY4wWxlCSO9g1Vs9Qqan3s/e+umq8qtVIgz/X0/"),
 		};
 
 		// given from server during communication
