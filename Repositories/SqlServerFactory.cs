@@ -6,6 +6,10 @@ namespace pbXStorage.Repositories
 {
 	class SqlServerSqlBuilder : SqlBuilder
 	{
+		public SqlServerSqlBuilder()
+			: base()
+		{ }
+
 		protected SqlServerSqlBuilder(SqlServerSqlBuilder src)
 			: base(src)
 		{ }
@@ -26,7 +30,9 @@ namespace pbXStorage.Repositories
 			return new DbOnSDC(
 				new SDCDatabase(
 					new SqlConnection(connectionString),
-					new SqlServerSqlBuilder()
+					new SDCDatabase.Options {
+						SqlBuilder = new SqlServerSqlBuilder()
+					}
 				)
 			);
 		}

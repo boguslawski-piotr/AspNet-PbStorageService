@@ -48,25 +48,6 @@ namespace pbXStorage.Repositories
 		{
 			//await _db.DropTableAsync(TableName);
 			_things = await _db.TableAsync<Thing>(TableName);
-
-			Thing t = new Thing
-			{
-				StorageId = "cos",
-				Id = "cos",
-			};
-
-			//t = await _things.FindAsync(t);
-
-			//_things = await _db.TableAsync<Thing>(TableName + "_test");
-
-			t.Data = "cos";
-			t.ModifiedOn = 0;
-			//await _things.InsertOrUpdateAsync(t);
-			//await _things.UpdateAsync(t);
-			bool rc = await ((SDCTable<Thing>)_things).ExistsAsync(t);
-
-			await _things.DeleteAsync(t);
-
 		}
 
 		Thing PrepareThingPk(string storageId, string thingId)
@@ -97,7 +78,7 @@ namespace pbXStorage.Repositories
 
 		public async Task<bool> ThingExistsAsync(string storageId, string thingId)
 		{
-			return await GetThingRawCopyAsync(storageId, thingId).ConfigureAwait(false) != null;
+			return await _things.ExistsAsync(PrepareThingPk(storageId, thingId)).ConfigureAwait(false);
 		}
 
 		public async Task<DateTime> GetThingModifiedOnAsync(string storageId, string thingId)
@@ -124,7 +105,7 @@ namespace pbXStorage.Repositories
 
 		public async Task<IEnumerable<IdInDb>> FindThingIdsAsync(string storageId, string pattern)
 		{
-			using (IQueryResult<Thing> q = await _db.QueryAsync<Thing>($"SELECT StorageId, Id FROM {TableName} WHERE StorageId = @_1;", storageId).ConfigureAwait(false))
+			using (IQueryResult<Thing> q = await _things.Rows.Where(r => r.StorageId == storageId).QueryAsync().ConfigureAwait(false))
 			{
 				bool emptyPattern = string.IsNullOrWhiteSpace(pattern);
 				List<IdInDb> ids = new List<IdInDb>();
@@ -145,26 +126,19 @@ namespace pbXStorage.Repositories
 
 		public async Task DiscardAllAsync(string storageId)
 		{
-			await _db.StatementAsync($"DELETE FROM {TableName} WHERE StorageId = @_1;", storageId).ConfigureAwait(false);
+			await _things.DeleteAsync(r => r.StorageId == storageId).ConfigureAwait(false);
 			if (storageId.IndexOf('/') < 0)
-				await _db.StatementAsync($"DELETE FROM {TableName} WHERE StorageId like @_1;", storageId + "/%").ConfigureAwait(false);
-
-			// StartsWith:
-			// select * from Things where (StorageId like "test" || '%' and (substr(StorageId, 1, length("test"))) = "test") or StorageId = ""
+				await _things.DeleteAsync(r => r.StorageId.StartsWith(storageId + "/")).ConfigureAwait(false);
 		}
 
 		public async Task<IEnumerable<IdInDb>> FindAllIdsAsync(string storageId, string pattern)
 		{
-			SqlBuilder sql = _db.Sql
-				.Select()["StorageId"]["Id"]
-				.From(TableName)
-				.Where();
-
 			IQueryResult<Thing> q = null;
+
 			if (storageId.IndexOf('/') < 0)
-				q = await _db.QueryAsync<Thing>(sql["StorageId"].Like.P(1), storageId + "/%").ConfigureAwait(false);
+				q = await _things.Rows.Where(r => r.StorageId.StartsWith(storageId)).QueryAsync().ConfigureAwait(false);
 			else
-				q = await _db.QueryAsync<Thing>(sql["StorageId"].Eq.P(1), storageId).ConfigureAwait(false);
+				q = await _things.Rows.Where(r => r.StorageId == storageId).QueryAsync().ConfigureAwait(false);
 
 			using (q)
 			{
