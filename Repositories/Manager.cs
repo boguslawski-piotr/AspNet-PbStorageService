@@ -217,7 +217,7 @@ namespace pbXStorage.Repositories
 			}
 			catch (Exception)
 			{
-				return ERROR(PbXStorageErrorCode.RepositoryDoesNotExist, T.Localized("SOPXS_RepoDoesntExist"));
+				return ERROR(PbXStorageErrorCode.RepositoryDoesNotExist, Localized.T("SOPXS_RepoDoesntExist"));
 			}
 
 			try
@@ -253,7 +253,7 @@ namespace pbXStorage.Repositories
 			await GCAsync();
 
 			if (!_apps.TryGetValue(appToken, out App app))
-				return ERROR(PbXStorageErrorCode.IncorrectAppToken, T.Localized("SOPXS_IncorrectAppToken"));
+				return ERROR(PbXStorageErrorCode.IncorrectAppToken, Localized.T("SOPXS_IncorrectAppToken"));
 
 			try
 			{
@@ -284,7 +284,7 @@ namespace pbXStorage.Repositories
 		async Task<string> ExecuteInStorage(string storageToken, Func<Storage, Task<string>> action, [CallerMemberName]string callerName = null)
 		{
 			if (!_storages.TryGetValue(storageToken, out Storage storage))
-				return ERROR(PbXStorageErrorCode.IncorrectStorageToken, T.Localized("SOPXS_IncorrectStorageToken"), callerName);
+				return ERROR(PbXStorageErrorCode.IncorrectStorageToken, Localized.T("SOPXS_IncorrectStorageToken"), callerName);
 
 			try
 			{

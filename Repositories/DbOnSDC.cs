@@ -84,14 +84,14 @@ namespace pbXStorage.Repositories
 
 		public async Task<DateTime> GetThingModifiedOnAsync(string storageId, string thingId)
 		{
-			Thing thing = await GetThingRawCopyAsync(storageId, thingId).ConfigureAwait(false) ?? throw new Exception(T.Localized("PXS_ThingNotFound", storageId, thingId));
+			Thing thing = await GetThingRawCopyAsync(storageId, thingId).ConfigureAwait(false) ?? throw new Exception(Localized.T("PXS_ThingNotFound", storageId, thingId));
 
 			return new DateTime(thing.ModifiedOn, DateTimeKind.Utc);
 		}
 
 		public async Task<string> GetThingCopyAsync(string storageId, string thingId, ISimpleCryptographer cryptographer = null)
 		{
-			Thing thing = await GetThingRawCopyAsync(storageId, thingId).ConfigureAwait(false) ?? throw new Exception(T.Localized("PXS_ThingNotFound", storageId, thingId));
+			Thing thing = await GetThingRawCopyAsync(storageId, thingId).ConfigureAwait(false) ?? throw new Exception(Localized.T("PXS_ThingNotFound", storageId, thingId));
 
 			if (cryptographer != null)
 				thing.Data = cryptographer.Decrypt(thing.Data);

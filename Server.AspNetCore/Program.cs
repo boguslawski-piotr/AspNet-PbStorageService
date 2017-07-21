@@ -64,7 +64,7 @@ namespace pbXStorage.Server.AspNetCore
 					logging.AddConsole();
 					//logging.AddDebug();
 
-					var logger = logging.Services.BuildServiceProvider().GetService<ILoggerFactory>().CreateLogger("pbXStorage.Repositories");
+					var logger = logging.Services.BuildServiceProvider().GetService<ILoggerFactory>().CreateLogger("pbXStorage");
 					pbXNet.Log.AddLogger(new ILogger2MicrosoftILogger(logger));
 				})
 

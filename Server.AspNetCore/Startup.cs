@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using pbXNet;
 using pbXStorage.Repositories;
 using pbXStorage.Server.AspNetCore.Data;
@@ -19,6 +20,8 @@ namespace pbXStorage.Server.AspNetCore
 
 		IConfiguration _configuration { get; }
 
+		Microsoft.Extensions.Logging.ILogger _logger;
+
 		public Startup(IHostingEnvironment hostingEnvironment, IConfiguration configuration)
 		{
 			_hostingEnvironment = hostingEnvironment;
@@ -28,6 +31,8 @@ namespace pbXStorage.Server.AspNetCore
 		public void ConfigureServices(IServiceCollection services)
 		{
 			// Setup.
+
+			_logger = services.BuildServiceProvider().GetService<ILoggerFactory>().CreateLogger("pbXStorage.Startup");
 
 			string serverId = _configuration.GetValue<string>("ServerId");
 			if(string.IsNullOrWhiteSpace(serverId))
@@ -39,13 +44,15 @@ namespace pbXStorage.Server.AspNetCore
 				if (string.IsNullOrWhiteSpace(v))
 					v = $"SQlite;Data Source={serverId}-{dbName}.db";
 
-				v =
-					Environment.ExpandEnvironmentVariables(v)
+				v =	Environment.ExpandEnvironmentVariables(v)
 					.Replace("%ServerId%", serverId)
 					.Replace("%ContentRootPath%", _hostingEnvironment.ContentRootPath)
 					.Replace('/', Path.DirectorySeparatorChar);
 
-				Log.I($"{dbName}: {v?.Split(';')?[0]}", this);
+				if(_logger.IsEnabled(LogLevel.Trace))
+					_logger.LogTrace($"{dbName}: {v}");
+				else
+					_logger.LogInformation($"{dbName}: {v?.Split(';')?[0]}");
 
 				return v;
 			}
