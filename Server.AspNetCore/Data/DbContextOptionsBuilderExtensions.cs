@@ -67,12 +67,12 @@ namespace pbXStorage.Server.AspNetCore.Data
 						Path.Combine(Path.GetDirectoryName(thisAssembly.Location), providerAssemblyName.Name) + ".dll"
 					);
 
-					Log.I($"loaded assembly '{providerAssembly.FullName}'.");
+					Log.I($"loaded assembly '{providerAssembly.FullName}'.", typeof(DbContextOptionsBuilderExtensions));
 
 					string dbFactoryClassName = providerNames[0].Trim();
 					var dbFactoryInstance = (IDbFactory)providerAssembly.CreateInstance(dbFactoryClassName, false);
 
-					Log.I($"class '{dbFactoryInstance.GetType()}' will be used to create database connection objects.");
+					Log.I($"class '{dbFactoryInstance.GetType()}' will be used to create database connection objects.", typeof(DbContextOptionsBuilderExtensions));
 
 					return builder
 						.UseDbFactory(connectionString, dbFactoryInstance);
