@@ -17,20 +17,21 @@ namespace pbXStorage.Repositories
 			[PrimaryKey]
 			[Length(192)]
 			[Index(nameof(StorageId))]
-			public string StorageId { get; set; }
+			public string StorageId;
 
 			[PrimaryKey]
 			[Length(192)]
-			public string Id { get; set; }
+			public string Id;
 
 			[Length(int.MaxValue)]
-			public string Data { get; set; }
+			public string Data;
 
 			[NotNull]
-			public long ModifiedOn { get; set; }
+			public long ModifiedOn;
 		}
 
 		IDatabase _db;
+
 		ITable<Thing> _things;
 
 		public DbOnSDC(IDatabase db)
